@@ -1,6 +1,10 @@
 {
   "version": 2,
   "builds": [
-    { "src": "*.php", "use": "vercel-php@0.7.4" }
+    { "src": "_entrada.php", "use": "vercel-php@0.7.4" }
+  ],
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/_entrada.php" }
   ]
 }
