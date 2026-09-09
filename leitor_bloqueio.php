@@ -25,8 +25,8 @@ if ($leitor['status'] === 'bloqueado') {
     // Só desbloqueia se não houver empréstimo atrasado em aberto
     // (a data prevista já passou e ainda não foi devolvido).
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos
-        WHERE leitor_id = :id AND status != 'devolvido' AND data_prevista < CURDATE()");
-    $stmt->execute(['id' => $id]);
+        WHERE leitor_id = :id AND status != 'devolvido' AND data_prevista < :hoje");
+    $stmt->execute(['id' => $id, 'hoje' => date('Y-m-d')]);
 
     if ($stmt->fetchColumn() > 0) {
         flash('Este leitor ainda possui empréstimo(s) atrasado(s). Registre a devolução antes de desbloquear.', 'erro');

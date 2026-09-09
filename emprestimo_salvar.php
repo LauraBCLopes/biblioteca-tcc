@@ -43,10 +43,14 @@ try {
     $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
     $stmt->execute(['id' => $livroId]);
 
+    // datas calculadas no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+    $hoje = date('Y-m-d');
+    $prevista = date('Y-m-d', strtotime("+{$prazo} days"));
+
     $stmt = $pdo->prepare('INSERT INTO emprestimos
         (livro_id, leitor_id, data_emprestimo, data_prevista, status, renovacoes)
-        VALUES (:livro_id, :leitor_id, CURDATE(), DATE_ADD(CURDATE(), INTERVAL :prazo DAY), \'ativo\', 0)');
-    $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId, 'prazo' => $prazo]);
+        VALUES (:livro_id, :leitor_id, :hoje, :prevista, \'ativo\', 0)');
+    $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId, 'hoje' => $hoje, 'prevista' => $prevista]);
 
     $pdo->commit();
     flash("Empréstimo registrado para {$leitor['nome']}.");

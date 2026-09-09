@@ -18,8 +18,8 @@ if (!$emprestimo || $emprestimo['status'] === 'devolvido') {
 
 $pdo->beginTransaction();
 try {
-    $stmt = $pdo->prepare("UPDATE emprestimos SET status = 'devolvido', data_devolucao = CURDATE() WHERE id = :id");
-    $stmt->execute(['id' => $id]);
+    $stmt = $pdo->prepare("UPDATE emprestimos SET status = 'devolvido', data_devolucao = :hoje WHERE id = :id");
+    $stmt->execute(['hoje' => date('Y-m-d'), 'id' => $id]);
 
     $stmt = $pdo->prepare('UPDATE livros
         SET exemplares_disponiveis = LEAST(exemplares_total, exemplares_disponiveis + 1)

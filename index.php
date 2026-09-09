@@ -6,6 +6,21 @@ requireLogin();
 $admin = adminAtual();
 $pdo = getConexao();
 
+// datas calculadas no PHP (não com DATEDIFF) para funcionar igual em MySQL e Postgres
+$hoje = date('Y-m-d');
+$emTresDias = date('Y-m-d', strtotime('+3 days'));
+$hojeTs = strtotime($hoje);
+
+/** Adiciona 'dias' (dias até o vencimento) a cada linha de uma lista de empréstimos. */
+function comDiasAteVencimento(array $linhas, int $hojeTs): array
+{
+    foreach ($linhas as &$linha) {
+        $linha['dias'] = (int) round((strtotime($linha['data_prevista']) - $hojeTs) / 86400);
+    }
+    unset($linha);
+    return $linhas;
+}
+
 if (isAdmin()) {
     // --- números gerais do acervo e dos leitores ---
     $totalLivros        = (int) $pdo->query('SELECT COUNT(*) FROM livros')->fetchColumn();
@@ -17,21 +32,25 @@ if (isAdmin()) {
     // --- circulação ---
     $emprestimosAtivos    = (int) $pdo->query("SELECT COUNT(*) FROM emprestimos WHERE status IN ('ativo','atrasado')")->fetchColumn();
     $emprestimosAtrasados = (int) $pdo->query("SELECT COUNT(*) FROM emprestimos WHERE status = 'atrasado'")->fetchColumn();
-    $vencendoEmBreve      = (int) $pdo->query("SELECT COUNT(*) FROM emprestimos WHERE status = 'ativo' AND DATEDIFF(data_prevista, CURDATE()) BETWEEN 0 AND 3")->fetchColumn();
-    $reservasPendentes    = (int) $pdo->query("SELECT COUNT(*) FROM reservas WHERE status = 'pendente'")->fetchColumn();
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos WHERE status = 'ativo' AND data_prevista BETWEEN :hoje AND :em_tres_dias");
+    $stmt->execute(['hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
+    $vencendoEmBreve = (int) $stmt->fetchColumn();
+
+    $reservasPendentes = (int) $pdo->query("SELECT COUNT(*) FROM reservas WHERE status = 'pendente'")->fetchColumn();
 
     // --- empréstimos que pedem atenção: atrasados + vencendo nos próximos 3 dias ---
-    $listaAtencao = $pdo->query(
-        "SELECT e.id, e.data_prevista, e.status, l.titulo AS livro_titulo, r.nome AS leitor_nome,
-                DATEDIFF(e.data_prevista, CURDATE()) AS dias
+    $stmt = $pdo->prepare(
+        "SELECT e.id, e.data_prevista, e.status, l.titulo AS livro_titulo, r.nome AS leitor_nome
          FROM emprestimos e
          JOIN livros l   ON l.id = e.livro_id
          JOIN leitores r ON r.id = e.leitor_id
          WHERE e.status = 'atrasado'
-            OR (e.status = 'ativo' AND DATEDIFF(e.data_prevista, CURDATE()) BETWEEN 0 AND 3)
+            OR (e.status = 'ativo' AND e.data_prevista BETWEEN :hoje AND :em_tres_dias)
          ORDER BY e.data_prevista ASC
          LIMIT 8"
-    )->fetchAll();
+    );
+    $stmt->execute(['hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
+    $listaAtencao = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
 
     // --- livros por categoria (para o gráfico de barras) ---
     $porCategoria = $pdo->query(
@@ -62,8 +81,8 @@ if (isAdmin()) {
     $stmt->execute(['id' => $admin['id']]);
     $meusAtrasados = (int) $stmt->fetchColumn();
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos WHERE leitor_id = :id AND status = 'ativo' AND DATEDIFF(data_prevista, CURDATE()) BETWEEN 0 AND 3");
-    $stmt->execute(['id' => $admin['id']]);
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos WHERE leitor_id = :id AND status = 'ativo' AND data_prevista BETWEEN :hoje AND :em_tres_dias");
+    $stmt->execute(['id' => $admin['id'], 'hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
     $meuVencendo = (int) $stmt->fetchColumn();
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE leitor_id = :id AND status = 'pendente'");
@@ -72,17 +91,16 @@ if (isAdmin()) {
 
     // --- meus empréstimos que pedem atenção: atrasados + vencendo nos próximos 3 dias ---
     $stmt = $pdo->prepare(
-        "SELECT e.id, e.data_prevista, e.status, l.titulo AS livro_titulo,
-                DATEDIFF(e.data_prevista, CURDATE()) AS dias
+        "SELECT e.id, e.data_prevista, e.status, l.titulo AS livro_titulo
          FROM emprestimos e
          JOIN livros l ON l.id = e.livro_id
          WHERE e.leitor_id = :id
            AND (e.status = 'atrasado'
-                OR (e.status = 'ativo' AND DATEDIFF(e.data_prevista, CURDATE()) BETWEEN 0 AND 3))
+                OR (e.status = 'ativo' AND e.data_prevista BETWEEN :hoje AND :em_tres_dias))
          ORDER BY e.data_prevista ASC"
     );
-    $stmt->execute(['id' => $admin['id']]);
-    $minhaListaAtencao = $stmt->fetchAll();
+    $stmt->execute(['id' => $admin['id'], 'hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
+    $minhaListaAtencao = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
 }
 
 $tituloAba = 'Painel';

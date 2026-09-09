@@ -9,13 +9,7 @@ $usuario = adminAtual();
 $filtro = $_GET['status'] ?? 'todos';
 
 $sql = "SELECT e.*, l.titulo AS livro_titulo, l.codigo AS livro_codigo,
-               r.nome AS leitor_nome,
-               CASE
-                 WHEN e.status = 'devolvido' THEN 'devolvido'
-                 WHEN e.status = 'atrasado'  THEN 'atrasado'
-                 WHEN DATEDIFF(e.data_prevista, CURDATE()) <= 3 THEN 'aviso'
-                 ELSE 'ativo'
-               END AS situacao
+               r.nome AS leitor_nome
         FROM emprestimos e
         JOIN livros l    ON l.id = e.livro_id
         JOIN leitores r  ON r.id = e.leitor_id";
@@ -29,6 +23,20 @@ $sql .= ' ORDER BY e.data_emprestimo DESC';
 $stmt = $pdo->prepare($sql);
 $stmt->execute($paramsTodos);
 $todos = $stmt->fetchAll();
+
+// 'situacao' é calculada aqui (não em SQL) para funcionar igual em MySQL e Postgres
+$hojeTs = strtotime(date('Y-m-d'));
+foreach ($todos as &$e) {
+    if ($e['status'] === 'devolvido') {
+        $e['situacao'] = 'devolvido';
+    } elseif ($e['status'] === 'atrasado') {
+        $e['situacao'] = 'atrasado';
+    } else {
+        $dias = (int) round((strtotime($e['data_prevista']) - $hojeTs) / 86400);
+        $e['situacao'] = $dias <= 3 ? 'aviso' : 'ativo';
+    }
+}
+unset($e);
 
 $emprestimos = $filtro === 'todos'
     ? $todos

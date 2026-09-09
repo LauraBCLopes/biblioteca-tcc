@@ -36,10 +36,13 @@ if ((int) $emprestimo['renovacoes'] >= 2) {
     exit;
 }
 
+// nova data calculada no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+$novaPrevista = date('Y-m-d', strtotime($emprestimo['data_prevista'] . ' +7 days'));
+
 $stmt = $pdo->prepare('UPDATE emprestimos
-    SET data_prevista = DATE_ADD(data_prevista, INTERVAL 7 DAY), renovacoes = renovacoes + 1
+    SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1
     WHERE id = :id');
-$stmt->execute(['id' => $id]);
+$stmt->execute(['nova_prevista' => $novaPrevista, 'id' => $id]);
 
 flash('Empréstimo renovado por mais 7 dias.');
 header('Location: emprestimos.php');

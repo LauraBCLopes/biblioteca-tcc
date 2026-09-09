@@ -7,13 +7,17 @@ $pdo = getConexao();
 
 $busca = trim($_GET['busca'] ?? '');
 
+// datas calculadas no PHP (não com DATEDIFF) para funcionar igual em MySQL e Postgres
+$hoje = date('Y-m-d');
+$emTresDias = date('Y-m-d', strtotime('+3 days'));
+
 $sql = "SELECT l.*,
         (SELECT COUNT(*) FROM emprestimos e WHERE e.leitor_id = l.id AND e.status != 'devolvido') AS emprestimos_ativos,
         (SELECT COUNT(*) FROM emprestimos e WHERE e.leitor_id = l.id AND e.status = 'atrasado') AS emprestimos_atrasados,
-        (SELECT COUNT(*) FROM emprestimos e WHERE e.leitor_id = l.id AND e.status = 'ativo' AND DATEDIFF(e.data_prevista, CURDATE()) BETWEEN 0 AND 3) AS emprestimos_vencendo
+        (SELECT COUNT(*) FROM emprestimos e WHERE e.leitor_id = l.id AND e.status = 'ativo' AND e.data_prevista BETWEEN :hoje AND :em_tres_dias) AS emprestimos_vencendo
         FROM leitores l
         WHERE 1=1";
-$params = [];
+$params = ['hoje' => $hoje, 'em_tres_dias' => $emTresDias];
 
 if ($busca !== '') {
     $sql .= ' AND (l.nome LIKE :busca OR l.email LIKE :busca)';

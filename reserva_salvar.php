@@ -60,8 +60,8 @@ if ($stmt->fetchColumn() > 0) {
 }
 
 $stmt = $pdo->prepare('INSERT INTO reservas (livro_id, leitor_id, data_reserva, status)
-    VALUES (:livro_id, :leitor_id, CURDATE(), \'pendente\')');
-$stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId]);
+    VALUES (:livro_id, :leitor_id, :hoje, \'pendente\')');
+$stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId, 'hoje' => date('Y-m-d')]);
 
 flash("Reserva registrada para {$leitor['nome']}.");
 header('Location: reservas.php');

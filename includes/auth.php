@@ -11,7 +11,18 @@
 
 require_once __DIR__ . '/../config/database.php';
 
+// Fixo aqui (não confio no php.ini do servidor) para "hoje" nunca variar
+// entre ambientes — todo o sistema usa data(s) calculadas pelo PHP, nunca
+// pelo relógio do banco, justamente para não haver essa divergência.
+date_default_timezone_set('America/Sao_Paulo');
+
 if (session_status() === PHP_SESSION_NONE) {
+    // Em produção (Postgres/Vercel), a sessão fica no banco — ver includes/sessao_pg.php.
+    // Localmente (MySQL/XAMPP), usa o handler padrão de arquivo do PHP.
+    if (DB_DRIVER === 'pgsql') {
+        require_once __DIR__ . '/sessao_pg.php';
+        session_set_save_handler(new SessaoPostgres(getConexao()), true);
+    }
     session_start();
 }
 
@@ -124,9 +135,12 @@ function atualizarAtrasos(): void
 {
     $pdo = getConexao();
 
-    $pdo->exec("UPDATE emprestimos
+    // "hoje" vem do PHP (nunca do relógio do banco) para não haver
+    // divergência de fuso horário entre app e banco.
+    $stmt = $pdo->prepare("UPDATE emprestimos
         SET status = 'atrasado'
-        WHERE status = 'ativo' AND data_prevista < CURDATE()");
+        WHERE status = 'ativo' AND data_prevista < :hoje");
+    $stmt->execute(['hoje' => date('Y-m-d')]);
 
     $pdo->exec("UPDATE leitores
         SET status = 'bloqueado'

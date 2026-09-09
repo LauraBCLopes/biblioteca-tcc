@@ -19,6 +19,40 @@ e-mail) — o sistema identifica automaticamente qual é qual:
 - MySQL ou MariaDB
 - Um ambiente local como **XAMPP**, **Laragon** ou **WAMP** (mais simples para quem vai abrir no VS Code)
 
+## Deploy (Vercel + Supabase)
+
+Em produção o sistema roda na **Vercel** (runtime da comunidade
+[`vercel-php`](https://github.com/vercel-community/php), já configurado em
+`vercel.json`) com banco de dados **Supabase** (Postgres). Localmente
+continua tudo em MySQL/XAMPP normalmente — nada muda no seu ambiente.
+
+### 1. Conectar o repositório à Vercel
+No painel da Vercel: **Add New Project** → importe este repositório do
+GitHub. A cada `git push` em qualquer branch, a Vercel cria automaticamente
+um deploy de preview; push na branch `main` gera o deploy de produção.
+
+### 2. Configurar as variáveis de ambiente
+Em **Project Settings → Environment Variables**, cadastre as chaves
+listadas em `.env.example`, usando os dados do Supabase (Project Settings →
+Database → Connection string → aba **Session pooler**, porta `5432` — não
+use "Direct connection", que é só IPv6 e "Transaction pooler", que não
+suporta as transações/travas que o sistema usa):
+
+```
+DB_DRIVER=pgsql
+DB_HOST=<host do pooler>
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=<usuario do pooler, ex: postgres.xxxxxxxxxxxx>
+DB_PASS=<senha do banco>
+```
+
+### 3. Banco de dados no Supabase
+Rode o schema Postgres (`sql/schema_supabase.sql`) no SQL Editor do
+Supabase antes do primeiro deploy — ele cria as tabelas, a tabela de
+sessões (`sessoes`, usada pelo login em produção) e o administrador
+inicial.
+
 ## Passo a passo
 
 ### 1. Colocar o projeto no servidor local

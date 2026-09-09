@@ -37,10 +37,14 @@ try {
     $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
     $stmt->execute(['id' => $reserva['livro_id']]);
 
+    // datas calculadas no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+    $hoje = date('Y-m-d');
+    $prevista = date('Y-m-d', strtotime('+14 days'));
+
     $stmt = $pdo->prepare('INSERT INTO emprestimos
         (livro_id, leitor_id, data_emprestimo, data_prevista, status, renovacoes)
-        VALUES (:livro_id, :leitor_id, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 14 DAY), \'ativo\', 0)');
-    $stmt->execute(['livro_id' => $reserva['livro_id'], 'leitor_id' => $reserva['leitor_id']]);
+        VALUES (:livro_id, :leitor_id, :hoje, :prevista, \'ativo\', 0)');
+    $stmt->execute(['livro_id' => $reserva['livro_id'], 'leitor_id' => $reserva['leitor_id'], 'hoje' => $hoje, 'prevista' => $prevista]);
 
     $stmt = $pdo->prepare("UPDATE reservas SET status = 'atendida' WHERE id = :id");
     $stmt->execute(['id' => $id]);
