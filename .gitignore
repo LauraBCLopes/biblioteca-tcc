@@ -1,0 +1,15 @@
+# Ambiente local / segredos
+.env
+.env.*
+!.env.example
+
+# Ferramentas locais (não fazem parte do projeto)
+.claude/
+.agents/
+skills-lock.json
+.vercel
+
+# Sistema
+Thumbs.db
+.DS_Store
+*.log
