@@ -5,6 +5,146 @@ requireLogin(); // acervo é visível para admin e aluno; ações de cadastro fi
 
 $pdo = getConexao();
 
+/**
+ * Gera um código de chamada único, ex: RO-482.7
+ * baseado na sigla da categoria.
+ */
+function gerarCodigo(PDO $pdo, int $categoriaId): string
+{
+    $stmt = $pdo->prepare('SELECT slug FROM categorias WHERE id = :id');
+    $stmt->execute(['id' => $categoriaId]);
+    $slug = $stmt->fetchColumn();
+
+    $prefixos = [
+        'romance'            => 'RO',
+        'ficcao-cientifica'  => 'FC',
+        'educacional'        => 'ED',
+        'obras-brasileiras'  => 'BR',
+    ];
+    $prefixo = $prefixos[$slug] ?? 'XX';
+
+    do {
+        $codigo = $prefixo . '-' . random_int(100, 999) . '.' . random_int(0, 9);
+        $chk = $pdo->prepare('SELECT COUNT(*) FROM livros WHERE codigo = :codigo');
+        $chk->execute(['codigo' => $codigo]);
+    } while ($chk->fetchColumn() > 0);
+
+    return $codigo;
+}
+
+// ---------- salvar (cadastro/edição) — só admin ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireAdmin();
+
+    $id              = !empty($_POST['id']) ? (int) $_POST['id'] : null;
+    $titulo          = trim($_POST['titulo'] ?? '');
+    $autor           = trim($_POST['autor'] ?? '');
+    $categoriaId     = (int) ($_POST['categoria_id'] ?? 0);
+    $anoPublicacao   = $_POST['ano_publicacao'] !== '' ? (int) $_POST['ano_publicacao'] : null;
+    $exemplaresTotal = (int) ($_POST['exemplares_total'] ?? 0);
+
+    if ($titulo === '' || $autor === '' || $categoriaId <= 0 || $exemplaresTotal < 1) {
+        flash('Preencha corretamente todos os campos obrigatórios.', 'erro');
+        header('Location: livros.php' . ($id ? "?editar=$id" : ''));
+        exit;
+    }
+
+    if ($id) {
+        // ---------- EDIÇÃO ----------
+        $stmt = $pdo->prepare('SELECT exemplares_total, exemplares_disponiveis FROM livros WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        $atual = $stmt->fetch();
+
+        if (!$atual) {
+            flash('Livro não encontrado.', 'erro');
+            header('Location: livros.php');
+            exit;
+        }
+
+        $emprestadosAgora = $atual['exemplares_total'] - $atual['exemplares_disponiveis'];
+
+        if ($exemplaresTotal < $emprestadosAgora) {
+            flash("Não é possível definir $exemplaresTotal exemplares: há $emprestadosAgora emprestado(s) no momento.", 'erro');
+            header("Location: livros.php?editar=$id");
+            exit;
+        }
+
+        $novaDisponibilidade = $exemplaresTotal - $emprestadosAgora;
+
+        $stmt = $pdo->prepare('UPDATE livros
+            SET titulo = :titulo, autor = :autor, categoria_id = :categoria_id,
+                ano_publicacao = :ano, exemplares_total = :total, exemplares_disponiveis = :disp
+            WHERE id = :id');
+        $stmt->execute([
+            'titulo'      => $titulo,
+            'autor'       => $autor,
+            'categoria_id'=> $categoriaId,
+            'ano'         => $anoPublicacao,
+            'total'       => $exemplaresTotal,
+            'disp'        => $novaDisponibilidade,
+            'id'          => $id,
+        ]);
+
+        flash('Livro atualizado com sucesso.');
+    } else {
+        // ---------- CADASTRO ----------
+        $codigo = gerarCodigo($pdo, $categoriaId);
+
+        // :total é usado duas vezes na tabela (total = disponíveis para um livro
+        // novo), mas precisa de dois placeholders distintos — com prepares nativos
+        // (PDO::ATTR_EMULATE_PREPARES = false), reaproveitar o mesmo nome dá erro
+        // "Invalid parameter number".
+        $stmt = $pdo->prepare('INSERT INTO livros
+            (codigo, titulo, autor, categoria_id, ano_publicacao, exemplares_total, exemplares_disponiveis)
+            VALUES (:codigo, :titulo, :autor, :categoria_id, :ano, :total, :disponiveis)');
+        $stmt->execute([
+            'codigo'      => $codigo,
+            'titulo'      => $titulo,
+            'autor'       => $autor,
+            'categoria_id'=> $categoriaId,
+            'ano'         => $anoPublicacao,
+            'total'       => $exemplaresTotal,
+            'disponiveis' => $exemplaresTotal,
+        ]);
+
+        flash('Livro adicionado ao acervo.');
+    }
+
+    header('Location: livros.php');
+    exit;
+}
+
+// ---------- excluir — só admin ----------
+if (!empty($_GET['excluir'])) {
+    requireAdmin();
+
+    $idExcluir = (int) $_GET['excluir'];
+
+    // Um livro que já foi emprestado alguma vez (mesmo devolvido) não pode ser
+    // removido — isso preservaria o histórico de circulação. A constraint
+    // fk_emp_livro (ON DELETE RESTRICT) garante isso no banco; aqui checamos
+    // antes para dar uma mensagem amigável ao usuário.
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM emprestimos WHERE livro_id = :id');
+    $stmt->execute(['id' => $idExcluir]);
+
+    if ($stmt->fetchColumn() > 0) {
+        flash('Este livro possui histórico de empréstimos e não pode ser removido do acervo.', 'erro');
+    } else {
+        try {
+            $stmt = $pdo->prepare('DELETE FROM livros WHERE id = :id');
+            $stmt->execute(['id' => $idExcluir]);
+            flash('Livro removido do acervo.');
+        } catch (PDOException $e) {
+            flash('Não foi possível remover este livro (ele está referenciado em outro registro).', 'erro');
+        }
+    }
+
+    header('Location: livros.php');
+    exit;
+}
+
+// ---------- listagem (visível para admin e aluno) ----------
+
 // --- categorias (usadas no formulário e nos filtros) ---
 $categorias = $pdo->query('SELECT id, nome, slug FROM categorias ORDER BY nome')->fetchAll();
 
@@ -59,7 +199,7 @@ require __DIR__ . '/includes/layout_topo.php';
       <h3 style="margin-bottom:16px;">
         <?= $livroEditando ? 'Editar livro' : 'Cadastrar novo livro' ?>
       </h3>
-      <form method="post" action="livro_salvar.php">
+      <form method="post" action="livros.php">
         <?php if ($livroEditando): ?>
           <input type="hidden" name="id" value="<?= (int) $livroEditando['id'] ?>">
         <?php endif; ?>
@@ -168,7 +308,7 @@ require __DIR__ . '/includes/layout_topo.php';
                 ); ?>
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <a class="btn ghost small" href="?editar=<?= (int) $l['id'] ?>">Editar</a>
-                <a class="btn danger small" href="livro_excluir.php?id=<?= (int) $l['id'] ?>"
+                <a class="btn danger small" href="?excluir=<?= (int) $l['id'] ?>"
                    onclick='return confirm(<?= $confirmMsg ?>);'>Excluir</a>
               </td>
               <?php endif; ?>

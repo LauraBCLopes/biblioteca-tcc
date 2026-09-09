@@ -6,6 +6,165 @@ requireLogin();
 $pdo = getConexao();
 $usuario = adminAtual();
 
+// ---------- registrar novo empréstimo — só admin ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireAdmin();
+
+    $livroId  = (int) ($_POST['livro_id'] ?? 0);
+    $leitorId = (int) ($_POST['leitor_id'] ?? 0);
+    $prazo    = max(1, (int) ($_POST['prazo'] ?? 14));
+
+    if ($livroId <= 0 || $leitorId <= 0) {
+        flash('Selecione um livro e um leitor.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // trava a linha do livro para evitar condição de corrida entre dois
+        // empréstimos simultâneos do último exemplar disponível
+        $stmt = $pdo->prepare('SELECT exemplares_disponiveis, titulo FROM livros WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $livroId]);
+        $livro = $stmt->fetch();
+
+        $stmt = $pdo->prepare("SELECT status, nome FROM leitores WHERE id = :id FOR UPDATE");
+        $stmt->execute(['id' => $leitorId]);
+        $leitor = $stmt->fetch();
+
+        if (!$livro || (int) $livro['exemplares_disponiveis'] <= 0) {
+            throw new RuntimeException('Este livro não possui exemplares disponíveis.');
+        }
+        if (!$leitor || $leitor['status'] !== 'ativo') {
+            throw new RuntimeException('Este leitor está bloqueado e não pode retirar livros.');
+        }
+
+        $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
+        $stmt->execute(['id' => $livroId]);
+
+        // datas calculadas no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+        $hoje = date('Y-m-d');
+        $prevista = date('Y-m-d', strtotime("+{$prazo} days"));
+
+        $stmt = $pdo->prepare('INSERT INTO emprestimos
+            (livro_id, leitor_id, data_emprestimo, data_prevista, status, renovacoes)
+            VALUES (:livro_id, :leitor_id, :hoje, :prevista, \'ativo\', 0)');
+        $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId, 'hoje' => $hoje, 'prevista' => $prevista]);
+
+        $pdo->commit();
+        flash("Empréstimo registrado para {$leitor['nome']}.");
+    } catch (Throwable $ex) {
+        $pdo->rollBack();
+        flash($ex->getMessage(), 'erro');
+    }
+
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- devolver — só admin ----------
+if (!empty($_GET['devolver'])) {
+    requireAdmin();
+
+    $idDevolver = (int) $_GET['devolver'];
+
+    $stmt = $pdo->prepare('SELECT * FROM emprestimos WHERE id = :id');
+    $stmt->execute(['id' => $idDevolver]);
+    $emprestimo = $stmt->fetch();
+
+    if (!$emprestimo || $emprestimo['status'] === 'devolvido') {
+        flash('Empréstimo não encontrado ou já devolvido.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("UPDATE emprestimos SET status = 'devolvido', data_devolucao = :hoje WHERE id = :id");
+        $stmt->execute(['hoje' => date('Y-m-d'), 'id' => $idDevolver]);
+
+        $stmt = $pdo->prepare('UPDATE livros
+            SET exemplares_disponiveis = LEAST(exemplares_total, exemplares_disponiveis + 1)
+            WHERE id = :id');
+        $stmt->execute(['id' => $emprestimo['livro_id']]);
+
+        // Se o leitor estava bloqueado e não tem mais nenhum outro atraso em aberto, desbloqueia
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos
+            WHERE leitor_id = :leitor_id AND id != :id AND status = 'atrasado'");
+        $stmt->execute(['leitor_id' => $emprestimo['leitor_id'], 'id' => $idDevolver]);
+        $outroAtraso = $stmt->fetchColumn() > 0;
+
+        if (!$outroAtraso) {
+            $stmt = $pdo->prepare("UPDATE leitores SET status = 'ativo' WHERE id = :id AND status = 'bloqueado'");
+            $stmt->execute(['id' => $emprestimo['leitor_id']]);
+        }
+
+        $pdo->commit();
+
+        // Avisa se há reserva pendente para este título (atendida manualmente em reservas.php)
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE livro_id = :livro_id AND status = 'pendente'");
+        $stmt->execute(['livro_id' => $emprestimo['livro_id']]);
+        $temReserva = $stmt->fetchColumn() > 0;
+
+        flash('Devolução registrada.' . ($temReserva ? ' Há uma reserva pendente para este título.' : ''), $temReserva ? 'erro' : 'ok');
+    } catch (Throwable $ex) {
+        $pdo->rollBack();
+        flash('Não foi possível registrar a devolução: ' . $ex->getMessage(), 'erro');
+    }
+
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- renovar — admin ou o próprio aluno ----------
+if (!empty($_GET['renovar'])) {
+    $idRenovar = (int) $_GET['renovar'];
+
+    $stmt = $pdo->prepare('SELECT * FROM emprestimos WHERE id = :id');
+    $stmt->execute(['id' => $idRenovar]);
+    $emprestimo = $stmt->fetch();
+
+    if (!$emprestimo) {
+        flash('Empréstimo não encontrado.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+    if (!isAdmin() && (int) $emprestimo['leitor_id'] !== (int) $usuario['id']) {
+        flash('Você só pode renovar os seus próprios empréstimos.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+    if ($emprestimo['status'] === 'devolvido') {
+        flash('Este empréstimo já foi devolvido.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+    if ($emprestimo['status'] === 'atrasado') {
+        flash('Empréstimos atrasados não podem ser renovados. Registre a devolução.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+    if ((int) $emprestimo['renovacoes'] >= 2) {
+        flash('Limite de 2 renovações já atingido para este empréstimo.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+
+    // nova data calculada no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+    $novaPrevista = date('Y-m-d', strtotime($emprestimo['data_prevista'] . ' +7 days'));
+
+    $stmt = $pdo->prepare('UPDATE emprestimos
+        SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1
+        WHERE id = :id');
+    $stmt->execute(['nova_prevista' => $novaPrevista, 'id' => $idRenovar]);
+
+    flash('Empréstimo renovado por mais 7 dias.');
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- listagem ----------
 $filtro = $_GET['status'] ?? 'todos';
 
 $sql = "SELECT e.*, l.titulo AS livro_titulo, l.codigo AS livro_codigo,
@@ -83,7 +242,7 @@ require __DIR__ . '/includes/layout_topo.php';
     <?php if (isAdmin()): ?>
     <div class="form-panel">
       <h3 style="margin-bottom:16px;">Registrar novo empréstimo</h3>
-      <form method="post" action="emprestimo_salvar.php">
+      <form method="post" action="emprestimos.php">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end;">
           <div class="field">
             <label>Livro</label>
@@ -159,10 +318,10 @@ require __DIR__ . '/includes/layout_topo.php';
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <?php if ($e['status'] !== 'devolvido'): ?>
                   <?php if (isAdmin()): ?>
-                    <a class="btn brass small" href="emprestimo_devolver.php?id=<?= (int) $e['id'] ?>">Devolver</a>
+                    <a class="btn brass small" href="?devolver=<?= (int) $e['id'] ?>">Devolver</a>
                   <?php endif; ?>
                   <?php if ($podeRenovar): ?>
-                    <a class="btn ghost small" href="emprestimo_renovar.php?id=<?= (int) $e['id'] ?>">Renovar</a>
+                    <a class="btn ghost small" href="?renovar=<?= (int) $e['id'] ?>">Renovar</a>
                   <?php else: ?>
                     <button class="btn ghost small" disabled>Renovar</button>
                   <?php endif; ?>

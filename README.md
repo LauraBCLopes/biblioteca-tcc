@@ -113,15 +113,22 @@ biblioteca-tcc/
 ├── sql/schema.sql             → script de criação do banco de dados
 ├── sql/migracao_login_aluno.sql → adiciona login de aluno a um banco já existente
 ├── login.php / logout.php     → login único (admin ou aluno, pelo e-mail) / encerra a sessão
-├── cadastro.php, cadastro_salvar.php → autocadastro de aluno (cria a própria conta)
+├── cadastro.php                → autocadastro de aluno (cria a própria conta)
 ├── index.php                  → painel: estatísticas (admin) ou meus empréstimos/reservas (aluno)
-├── livros.php, livro_salvar.php, livro_excluir.php → catálogo; cadastro/edição/exclusão é só admin
-├── leitores.php, leitor_salvar.php, leitor_excluir.php, leitor_bloqueio.php → gestão de leitores (admin)
-├── emprestimos.php, emprestimo_salvar.php, emprestimo_devolver.php, emprestimo_renovar.php
-│     → circulação; registrar/devolver é admin, renovar é admin ou o próprio aluno
-└── reservas.php, reserva_salvar.php, reserva_atender.php, reserva_cancelar.php
-      → fila de reservas; atender é admin, criar/cancelar é admin ou o próprio aluno
+├── livros.php                  → catálogo + cadastro/edição (?editar=ID) + exclusão (?excluir=ID), admin
+├── leitores.php                → gestão de leitores: cadastro/edição, exclusão (?excluir=ID),
+│                                  bloqueio/desbloqueio (?bloqueio=ID) — tudo admin
+├── emprestimos.php             → circulação: registrar (POST), devolver (?devolver=ID) são admin;
+│                                  renovar (?renovar=ID) é admin ou o próprio aluno
+└── reservas.php                → fila de reservas: criar (POST) é admin ou o próprio aluno,
+                                   atender (?atender=ID) é admin, cancelar (?cancelar=ID) é
+                                   admin ou o próprio aluno
 ```
+
+Cada uma dessas páginas concentra listagem + as ações do próprio recurso (uma
+única página por assunto, com a ação escolhida por parâmetro na URL/POST) —
+menos arquivos soltos, e também mantém o projeto bem abaixo do limite de
+funções serverless do plano gratuito da Vercel.
 
 ## Sobre a Parte 3 (livros)
 

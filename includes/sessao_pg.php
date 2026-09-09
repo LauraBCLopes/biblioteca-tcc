@@ -42,10 +42,12 @@ class SessaoPostgres implements SessionHandlerInterface
 
     public function write($id, $dados): bool
     {
+        // :dados_novo é um placeholder separado (não reaproveita :dados) para
+        // evitar "Invalid parameter number" com prepares nativos.
         $stmt = $this->pdo->prepare('INSERT INTO sessoes (id, dados, atualizado_em)
             VALUES (:id, :dados, NOW())
-            ON CONFLICT (id) DO UPDATE SET dados = :dados, atualizado_em = NOW()');
-        return $stmt->execute(['id' => $id, 'dados' => $dados]);
+            ON CONFLICT (id) DO UPDATE SET dados = :dados_novo, atualizado_em = NOW()');
+        return $stmt->execute(['id' => $id, 'dados' => $dados, 'dados_novo' => $dados]);
     }
 
     public function destroy($id): bool

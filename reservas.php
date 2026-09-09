@@ -6,6 +6,154 @@ requireLogin();
 $pdo = getConexao();
 $usuario = adminAtual();
 
+// ---------- registrar nova reserva — admin ou o próprio aluno ----------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $livroId  = (int) ($_POST['livro_id'] ?? 0);
+    // aluno só pode reservar para si mesmo, mesmo que tente enviar outro leitor_id
+    $leitorId = isAdmin() ? (int) ($_POST['leitor_id'] ?? 0) : (int) $usuario['id'];
+
+    if ($livroId <= 0 || $leitorId <= 0) {
+        flash('Selecione um livro e um leitor.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT titulo FROM livros WHERE id = :id');
+    $stmt->execute(['id' => $livroId]);
+    $livro = $stmt->fetch();
+
+    $stmt = $pdo->prepare("SELECT nome, status FROM leitores WHERE id = :id");
+    $stmt->execute(['id' => $leitorId]);
+    $leitor = $stmt->fetch();
+
+    if (!$livro) {
+        flash('Livro não encontrado.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+    if (!$leitor || $leitor['status'] !== 'ativo') {
+        flash('Este leitor está bloqueado e não pode fazer reservas.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    // evita reserva duplicada do mesmo leitor para o mesmo livro
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas
+        WHERE livro_id = :livro_id AND leitor_id = :leitor_id AND status = 'pendente'");
+    $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId]);
+    if ($stmt->fetchColumn() > 0) {
+        flash('Este leitor já possui uma reserva pendente para este livro.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    // evita reserva de um livro que o leitor já está com o empréstimo em aberto
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos
+        WHERE livro_id = :livro_id AND leitor_id = :leitor_id AND status != 'devolvido'");
+    $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId]);
+    if ($stmt->fetchColumn() > 0) {
+        flash('Este leitor já está com um exemplar deste livro emprestado.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO reservas (livro_id, leitor_id, data_reserva, status)
+        VALUES (:livro_id, :leitor_id, :hoje, \'pendente\')');
+    $stmt->execute(['livro_id' => $livroId, 'leitor_id' => $leitorId, 'hoje' => date('Y-m-d')]);
+
+    flash("Reserva registrada para {$leitor['nome']}.");
+    header('Location: reservas.php');
+    exit;
+}
+
+// ---------- atender — só admin ----------
+if (!empty($_GET['atender'])) {
+    requireAdmin();
+
+    $idAtender = (int) $_GET['atender'];
+
+    $stmt = $pdo->prepare('SELECT * FROM reservas WHERE id = :id');
+    $stmt->execute(['id' => $idAtender]);
+    $reserva = $stmt->fetch();
+
+    if (!$reserva || $reserva['status'] !== 'pendente') {
+        flash('Reserva não encontrada ou já finalizada.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare('SELECT exemplares_disponiveis, titulo FROM livros WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $reserva['livro_id']]);
+        $livro = $stmt->fetch();
+
+        $stmt = $pdo->prepare('SELECT status, nome FROM leitores WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $reserva['leitor_id']]);
+        $leitor = $stmt->fetch();
+
+        if (!$livro || (int) $livro['exemplares_disponiveis'] <= 0) {
+            throw new RuntimeException('Este livro não possui exemplares disponíveis no momento.');
+        }
+        if (!$leitor || $leitor['status'] !== 'ativo') {
+            throw new RuntimeException('Este leitor está bloqueado e não pode retirar livros.');
+        }
+
+        $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
+        $stmt->execute(['id' => $reserva['livro_id']]);
+
+        // datas calculadas no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+        $hoje = date('Y-m-d');
+        $prevista = date('Y-m-d', strtotime('+14 days'));
+
+        $stmt = $pdo->prepare('INSERT INTO emprestimos
+            (livro_id, leitor_id, data_emprestimo, data_prevista, status, renovacoes)
+            VALUES (:livro_id, :leitor_id, :hoje, :prevista, \'ativo\', 0)');
+        $stmt->execute(['livro_id' => $reserva['livro_id'], 'leitor_id' => $reserva['leitor_id'], 'hoje' => $hoje, 'prevista' => $prevista]);
+
+        $stmt = $pdo->prepare("UPDATE reservas SET status = 'atendida' WHERE id = :id");
+        $stmt->execute(['id' => $idAtender]);
+
+        $pdo->commit();
+        flash("Reserva atendida: empréstimo de \"{$livro['titulo']}\" registrado para {$leitor['nome']}.");
+    } catch (Throwable $ex) {
+        $pdo->rollBack();
+        flash($ex->getMessage(), 'erro');
+    }
+
+    header('Location: reservas.php');
+    exit;
+}
+
+// ---------- cancelar — admin ou o próprio aluno ----------
+if (!empty($_GET['cancelar'])) {
+    $idCancelar = (int) $_GET['cancelar'];
+
+    $stmt = $pdo->prepare('SELECT * FROM reservas WHERE id = :id');
+    $stmt->execute(['id' => $idCancelar]);
+    $reserva = $stmt->fetch();
+
+    if (!$reserva || $reserva['status'] !== 'pendente') {
+        flash('Reserva não encontrada ou já finalizada.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+    if (!isAdmin() && (int) $reserva['leitor_id'] !== (int) $usuario['id']) {
+        flash('Você só pode cancelar as suas próprias reservas.', 'erro');
+        header('Location: reservas.php');
+        exit;
+    }
+
+    $stmt = $pdo->prepare("UPDATE reservas SET status = 'cancelada' WHERE id = :id");
+    $stmt->execute(['id' => $idCancelar]);
+
+    flash('Reserva cancelada.');
+    header('Location: reservas.php');
+    exit;
+}
+
+// ---------- listagem ----------
 $filtro = $_GET['status'] ?? 'pendente';
 
 $sql = "SELECT res.*, l.titulo AS livro_titulo, l.exemplares_disponiveis, r.nome AS leitor_nome, r.status AS leitor_status
@@ -77,7 +225,7 @@ require __DIR__ . '/includes/layout_topo.php';
 
     <div class="form-panel">
       <h3 style="margin-bottom:16px;">Registrar nova reserva</h3>
-      <form method="post" action="reserva_salvar.php">
+      <form method="post" action="reservas.php">
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end;">
           <div class="field">
             <label>Livro</label>
@@ -165,12 +313,12 @@ require __DIR__ . '/includes/layout_topo.php';
                 <?php if ($r['status'] === 'pendente'): ?>
                   <?php if (isAdmin()): ?>
                     <?php if ($podeAtender): ?>
-                      <a class="btn brass small" href="reserva_atender.php?id=<?= (int) $r['id'] ?>">Atender</a>
+                      <a class="btn brass small" href="?atender=<?= (int) $r['id'] ?>">Atender</a>
                     <?php else: ?>
                       <button class="btn ghost small" disabled title="Sem exemplar disponível ou leitor bloqueado">Atender</button>
                     <?php endif; ?>
                   <?php endif; ?>
-                  <a class="btn danger small" href="reserva_cancelar.php?id=<?= (int) $r['id'] ?>"
+                  <a class="btn danger small" href="?cancelar=<?= (int) $r['id'] ?>"
                      onclick="return confirm('Cancelar esta reserva?');">Cancelar</a>
                 <?php endif; ?>
               </td>
