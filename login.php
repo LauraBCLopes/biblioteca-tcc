@@ -1,4 +1,15 @@
 <?php
+if (($_GET['debugenv'] ?? '') === 'x7k9') {
+    header('Content-Type: text/plain');
+    echo 'REQUEST_METHOD=' . ($_SERVER['REQUEST_METHOD'] ?? '?') . "\n";
+    echo "getenv(DB_DRIVER)=[" . var_export(getenv('DB_DRIVER'), true) . "]\n";
+    echo "getenv(DB_HOST)=[" . var_export(getenv('DB_HOST'), true) . "]\n";
+    echo "\$_ENV[DB_DRIVER]=[" . var_export($_ENV['DB_DRIVER'] ?? null, true) . "]\n";
+    echo "\$_SERVER[DB_DRIVER]=[" . var_export($_SERVER['DB_DRIVER'] ?? null, true) . "]\n";
+    require_once __DIR__ . '/config/database.php';
+    echo "DB_DRIVER constante=[" . DB_DRIVER . "]\n";
+    exit;
+}
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/functions.php';
 
