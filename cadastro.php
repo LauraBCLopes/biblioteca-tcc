@@ -20,15 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo = getConexao();
 
     $nome           = trim($_POST['nome'] ?? '');
-    $email          = trim($_POST['email'] ?? '');
+    $usuario        = trim($_POST['usuario'] ?? '');
     $telefone       = trim($_POST['telefone'] ?? '');
     $senha          = $_POST['senha'] ?? '';
     $confirmarSenha = $_POST['confirmar_senha'] ?? '';
 
-    $valoresDigitados = ['nome' => $nome, 'email' => $email, 'telefone' => $telefone];
+    $email = montarEmailComDominio($usuario, 'aluno.com.br');
+    $valoresDigitados = ['nome' => $nome, 'usuario' => $usuario, 'telefone' => $telefone];
 
-    if ($nome === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        voltarComErro('Preencha o nome e um e-mail válido.', $valoresDigitados);
+    if ($nome === '' || $usuario === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        voltarComErro('Preencha o nome e um usuário/e-mail válido.', $valoresDigitados);
     }
     if (mb_strlen($senha) < 6) {
         voltarComErro('A senha precisa ter pelo menos 6 caracteres.', $valoresDigitados);
@@ -90,46 +91,77 @@ unset($_SESSION['cadastro_valores']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Criar conta — BiblioTech</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Criar conta — Bibliotech</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/estilo.css">
 </head>
-<body class="login-page">
-  <div class="login-card" style="max-width:420px;">
-    <div class="eyebrow">Estante Digital</div>
-    <h1>Criar conta de aluno</h1>
+<body>
+  <div class="auth-page">
+    <div class="auth-side">
+      <div class="brand-row">
+        <?= bibliotechLogo(38) ?>
+        <div>
+          <div class="brand-name">Bibliotech</div>
+          <div class="brand-tag">Estante Digital</div>
+        </div>
+      </div>
+      <div class="illustration">
+        <svg width="220" height="140" viewBox="0 0 220 140" fill="none">
+          <rect x="20" y="80" width="180" height="14" rx="4" fill="rgba(255,255,255,0.25)"/>
+          <rect x="35" y="35" width="34" height="52" rx="3" fill="rgba(255,255,255,0.85)"/>
+          <rect x="75" y="20" width="34" height="67" rx="3" fill="rgba(255,255,255,0.6)"/>
+          <rect x="115" y="45" width="34" height="42" rx="3" fill="rgba(255,255,255,0.85)"/>
+          <rect x="155" y="28" width="34" height="59" rx="3" fill="rgba(255,255,255,0.6)"/>
+        </svg>
+      </div>
+      <h2>Conhecimento sempre ao seu alcance.</h2>
+      <p class="sub">Crie sua conta de aluno e comece a explorar o acervo da biblioteca.</p>
+    </div>
 
-    <?php if ($erro): ?>
-      <div class="alert-box"><?= e($erro['mensagem']) ?></div>
-    <?php endif; ?>
+    <div class="auth-form-wrap">
+      <div class="login-card" style="max-width:440px;">
+        <div class="brand-row-mobile"><?= bibliotechLogo(30) ?> <strong>Bibliotech</strong></div>
+        <div class="eyebrow">Estante Digital</div>
+        <h1>Criar conta de aluno</h1>
 
-    <form method="post" action="cadastro.php" novalidate>
-      <div class="field">
-        <label for="nome">Nome completo</label>
-        <input type="text" id="nome" name="nome" required autofocus value="<?= e($valores['nome'] ?? '') ?>">
-      </div>
-      <div class="field">
-        <label for="email">E-mail</label>
-        <input type="email" id="email" name="email" required value="<?= e($valores['email'] ?? '') ?>">
-      </div>
-      <div class="field">
-        <label for="telefone">Telefone (opcional)</label>
-        <input type="text" id="telefone" name="telefone" value="<?= e($valores['telefone'] ?? '') ?>">
-      </div>
-      <div class="field">
-        <label for="senha">Senha</label>
-        <input type="password" id="senha" name="senha" required minlength="6">
-      </div>
-      <div class="field">
-        <label for="confirmar_senha">Confirmar senha</label>
-        <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6">
-      </div>
-      <button type="submit" class="btn brass full">Criar minha conta</button>
-    </form>
+        <?php if ($erro): ?>
+          <div class="alert-box"><?= e($erro['mensagem']) ?></div>
+        <?php endif; ?>
 
-    <div class="hint">
-      Já tem conta? <a href="login.php">Fazer login</a>
+        <form method="post" action="cadastro.php" novalidate>
+          <div class="field">
+            <label for="nome">Nome completo</label>
+            <input type="text" id="nome" name="nome" required autofocus value="<?= e($valores['nome'] ?? '') ?>">
+          </div>
+          <div class="field">
+            <label for="usuario">Usuário</label>
+            <div class="login-user-field">
+              <input type="text" id="usuario" name="usuario" required placeholder="seu.nome"
+                     autocapitalize="off" autocorrect="off" value="<?= e($valores['usuario'] ?? '') ?>">
+              <span class="login-suffix">@aluno.com.br</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="telefone">Telefone (opcional)</label>
+            <input type="text" id="telefone" name="telefone" value="<?= e($valores['telefone'] ?? '') ?>">
+          </div>
+          <div class="field">
+            <label for="senha">Senha</label>
+            <input type="password" id="senha" name="senha" required minlength="6">
+          </div>
+          <div class="field">
+            <label for="confirmar_senha">Confirmar senha</label>
+            <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6">
+          </div>
+          <button type="submit" class="btn primary full">Criar minha conta</button>
+        </form>
+
+        <div class="hint">
+          Já tem conta? <a href="login.php">Fazer login</a>
+        </div>
+      </div>
     </div>
   </div>
+<script src="assets/js/interface.js"></script>
 </body>
 </html>

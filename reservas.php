@@ -217,10 +217,10 @@ require __DIR__ . '/includes/layout_topo.php';
 
     <div class="view-head">
       <div>
-        <div class="eyebrow">Ficha 05 / Reservas</div>
+        <div class="eyebrow">Reservas</div>
         <h2><?= isAdmin() ? 'Fila de reservas' : 'Minhas reservas' ?></h2>
       </div>
-      <div class="mono" style="color:#5a5044;font-size:12.5px;"><?= $pendentesCount ?> pendente(s)</div>
+      <div class="mono text-muted" style="font-size:12.5px;"><?= $pendentesCount ?> pendente(s)</div>
     </div>
 
     <div class="form-panel">
@@ -255,7 +255,7 @@ require __DIR__ . '/includes/layout_topo.php';
           <?php endif; ?>
         </div>
         <div style="margin-top:16px;">
-          <button class="btn brass" type="submit">Registrar reserva</button>
+          <button class="btn primary" type="submit">Registrar reserva</button>
         </div>
         <?php if (isAdmin()): ?>
         <div class="hint" style="text-align:left;margin-top:12px;">
@@ -275,7 +275,7 @@ require __DIR__ . '/includes/layout_topo.php';
       <?php
       $abas = ['pendente' => 'Pendentes', 'atendida' => 'Atendidas', 'cancelada' => 'Canceladas', 'todas' => 'Todas'];
       foreach ($abas as $slug => $label): ?>
-        <a href="?status=<?= $slug ?>" class="btn <?= $filtro === $slug ? 'brass' : 'ghost' ?> small"><?= $label ?></a>
+        <a href="?status=<?= $slug ?>" class="btn <?= $filtro === $slug ? 'primary' : 'ghost' ?> small"><?= $label ?></a>
       <?php endforeach; ?>
     </div>
 
@@ -289,7 +289,7 @@ require __DIR__ . '/includes/layout_topo.php';
         </thead>
         <tbody>
           <?php if (!$reservas): ?>
-            <tr><td colspan="<?= isAdmin() ? 6 : 5 ?>"><div style="padding:30px;text-align:center;color:#8a8069;">Nenhuma reserva nesta visualização.</div></td></tr>
+            <tr><td colspan="<?= isAdmin() ? 6 : 5 ?>"><div style="padding:30px;text-align:center;color:var(--texto-secundario);">Nenhuma reserva nesta visualização.</div></td></tr>
           <?php else: foreach ($reservas as $r):
               $sl = $STATUS_LABEL[$r['status']];
               $podeAtender = $r['status'] === 'pendente'
@@ -313,7 +313,7 @@ require __DIR__ . '/includes/layout_topo.php';
                 <?php if ($r['status'] === 'pendente'): ?>
                   <?php if (isAdmin()): ?>
                     <?php if ($podeAtender): ?>
-                      <a class="btn brass small" href="?atender=<?= (int) $r['id'] ?>">Atender</a>
+                      <a class="btn primary small" href="?atender=<?= (int) $r['id'] ?>">Atender</a>
                     <?php else: ?>
                       <button class="btn ghost small" disabled title="Sem exemplar disponível ou leitor bloqueado">Atender</button>
                     <?php endif; ?>

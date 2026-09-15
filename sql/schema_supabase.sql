@@ -48,6 +48,7 @@ CREATE TABLE leitores (
   nome           text NOT NULL,
   email          text NOT NULL UNIQUE,
   telefone       text,
+  matricula      text NULL,
   senha_hash     text NULL,     -- preenchido quando o aluno cria a senha em cadastro.php
   status         text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'bloqueado')),
   data_cadastro  timestamptz NOT NULL DEFAULT now()
@@ -63,6 +64,10 @@ CREATE TABLE livros (
   autor                   text NOT NULL,
   categoria_id            bigint NOT NULL REFERENCES categorias(id) ON DELETE RESTRICT ON UPDATE CASCADE,
   ano_publicacao          smallint,
+  editora                 text,
+  isbn                    text,
+  descricao               text,
+  capa_url                text,        -- URL/caminho da capa; nulo usa uma capa padrão
   exemplares_total        integer NOT NULL DEFAULT 1 CHECK (exemplares_total >= 0),
   exemplares_disponiveis  integer NOT NULL DEFAULT 1 CHECK (exemplares_disponiveis >= 0),
   criado_em               timestamptz NOT NULL DEFAULT now(),
@@ -82,9 +87,10 @@ CREATE TABLE emprestimos (
   data_emprestimo   date NOT NULL,
   data_prevista     date NOT NULL,           -- prazo de devolução
   data_devolucao    date NULL,               -- preenchido quando devolvido
-  status            text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'atrasado', 'devolvido')),
-  renovacoes        smallint NOT NULL DEFAULT 0 CHECK (renovacoes >= 0),
-  criado_em         timestamptz NOT NULL DEFAULT now()
+  status                text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'atrasado', 'devolvido')),
+  renovacoes            smallint NOT NULL DEFAULT 0 CHECK (renovacoes >= 0),
+  renovacao_solicitada  boolean NOT NULL DEFAULT false,   -- aluno pediu renovação; aguarda aprovação do admin
+  criado_em             timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_emp_status ON emprestimos (status);
@@ -104,6 +110,34 @@ CREATE TABLE reservas (
 
 CREATE INDEX idx_res_livro  ON reservas (livro_id);
 CREATE INDEX idx_res_status ON reservas (status);
+
+-- ---------------------------------------------------------
+-- NOTIFICAÇÕES (avisos de prazo, renovação, reserva disponível...)
+-- usuario_tipo + usuario_id aponta para administradores OU leitores,
+-- conforme o tipo — sem FK direta, já que pode ser qualquer uma das duas.
+-- ---------------------------------------------------------
+CREATE TABLE notificacoes (
+  id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  usuario_tipo  text NOT NULL CHECK (usuario_tipo IN ('admin', 'aluno')),
+  usuario_id    bigint NOT NULL,
+  titulo        text NOT NULL,
+  mensagem      text NOT NULL,
+  lida          boolean NOT NULL DEFAULT false,
+  data_criacao  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_notif_usuario ON notificacoes (usuario_tipo, usuario_id, lida);
+
+-- ---------------------------------------------------------
+-- FAVORITOS (livros marcados por um aluno para acompanhar depois)
+-- ---------------------------------------------------------
+CREATE TABLE favoritos (
+  id               bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  leitor_id        bigint NOT NULL REFERENCES leitores(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  livro_id         bigint NOT NULL REFERENCES livros(id) ON DELETE CASCADE ON UPDATE CASCADE,
+  data_adicionado  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT uq_fav_leitor_livro UNIQUE (leitor_id, livro_id)
+);
 
 -- ---------------------------------------------------------
 -- SESSÕES (sessão de login em produção — ver includes/sessao_pg.php)
@@ -130,6 +164,8 @@ ALTER TABLE leitores        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE livros          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE emprestimos     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservas        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificacoes    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE favoritos       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessoes         ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------

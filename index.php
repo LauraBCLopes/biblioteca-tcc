@@ -110,10 +110,11 @@ require __DIR__ . '/includes/layout_topo.php';
 
     <div class="view-head">
       <div>
-        <div class="eyebrow">Ficha 01 / Painel</div>
+        <div class="eyebrow">Painel</div>
         <h2>Bem-vindo(a), <?= e($admin['nome']) ?></h2>
+        <p class="text-muted" style="margin-top:6px;font-size:13.5px;">Gerencie o acervo, os empréstimos e mantenha o conhecimento sempre em movimento.</p>
       </div>
-      <div class="mono" style="color:#5a5044;font-size:12.5px;">Hoje · <?= date('d/m/Y') ?></div>
+      <div class="mono text-muted" style="font-size:12.5px;">Hoje · <?= date('d/m/Y') ?></div>
     </div>
 
     <?php if (isAdmin()): ?>
@@ -125,7 +126,7 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
       <div class="stat-card ok">
         <div class="rotulo">Exemplares disponíveis</div>
-        <div class="valor"><?= $totalDisponiveis ?> <span style="font-size:16px;color:#8a8069;">/ <?= $totalExemplares ?></span></div>
+        <div class="valor"><?= $totalDisponiveis ?> <span style="font-size:16px;color:var(--texto-secundario);">/ <?= $totalExemplares ?></span></div>
       </div>
       <div class="stat-card">
         <div class="rotulo">Leitores cadastrados</div>
@@ -157,12 +158,12 @@ require __DIR__ . '/includes/layout_topo.php';
       <div class="panel">
         <h3 style="margin-bottom:16px;">Empréstimos que pedem atenção</h3>
         <?php if (!$listaAtencao): ?>
-          <p style="color:#8a8069;font-size:13px;">Nenhum empréstimo atrasado ou vencendo nos próximos dias. 🎉</p>
+          <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo atrasado ou vencendo nos próximos dias. 🎉</p>
         <?php else: foreach ($listaAtencao as $item): ?>
           <div class="attention-item">
             <div>
               <strong><?= e($item['livro_titulo']) ?></strong><br>
-              <span style="color:#8a8069;font-size:12px;"><?= e($item['leitor_nome']) ?></span>
+              <span style="color:var(--texto-secundario);font-size:12px;"><?= e($item['leitor_nome']) ?></span>
             </div>
             <div style="text-align:right;">
               <?php if ($item['status'] === 'atrasado'): ?>
@@ -172,7 +173,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php else: ?>
                 <span class="badge warn">Vence em <?= (int) $item['dias'] ?>d</span>
               <?php endif; ?>
-              <br><span class="mono" style="color:#8a8069;font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
+              <br><span class="mono" style="color:var(--texto-secundario);font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
             </div>
           </div>
         <?php endforeach; endif; ?>
@@ -193,14 +194,34 @@ require __DIR__ . '/includes/layout_topo.php';
 
         <h3 style="margin:22px 0 16px;">Mais emprestados</h3>
         <?php if (!$maisEmprestados): ?>
-          <p style="color:#8a8069;font-size:13px;">Ainda não há empréstimos registrados.</p>
+          <p style="color:var(--texto-secundario);font-size:13px;">Ainda não há empréstimos registrados.</p>
         <?php else: foreach ($maisEmprestados as $i => $item): ?>
           <div class="attention-item">
-            <span><strong class="mono" style="color:#b08d57;">#<?= $i + 1 ?></strong> <?= e($item['titulo']) ?></span>
-            <span class="mono" style="color:#8a8069;"><?= (int) $item['qtd'] ?>x</span>
+            <span><strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($item['titulo']) ?></span>
+            <span class="mono" style="color:var(--texto-secundario);"><?= (int) $item['qtd'] ?>x</span>
           </div>
         <?php endforeach; endif; ?>
       </div>
+    </div>
+
+    <h3 style="margin:26px 0 14px;">Ações rápidas</h3>
+    <div class="quick-actions">
+      <a class="quick-action" href="livros.php">
+        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5c2-1 4.6-1 6.5.3v9.7c-1.9-1.3-4.5-1.3-6.5-.3V4.5ZM16.5 4.5c-2-1-4.6-1-6.5.3v9.7c1.9-1.3 4.5-1.3 6.5-.3V4.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+        Cadastrar novo livro
+      </a>
+      <a class="quick-action" href="leitores.php">
+        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="6.5" r="2.6" stroke="currentColor" stroke-width="1.6"/><path d="M4 16c.6-3 3-4.5 6-4.5s5.4 1.5 6 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+        Cadastrar usuário
+      </a>
+      <a class="quick-action" href="emprestimos.php">
+        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="5" width="13" height="10.5" rx="1.6" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 8.2h13M7 5V3.6M13 5V3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+        Registrar empréstimo
+      </a>
+      <a class="quick-action" href="relatorios.php">
+        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><path d="M4 16V8.5M9 16V4M14 16v-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
+        Ver relatórios
+      </a>
     </div>
 
     <?php else: ?>
@@ -227,7 +248,7 @@ require __DIR__ . '/includes/layout_topo.php';
     <div class="panel">
       <h3 style="margin-bottom:16px;">Seus empréstimos que pedem atenção</h3>
       <?php if (!$minhaListaAtencao): ?>
-        <p style="color:#8a8069;font-size:13px;">Nenhum empréstimo seu está atrasado ou vencendo nos próximos dias. 🎉</p>
+        <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo seu está atrasado ou vencendo nos próximos dias. 🎉</p>
       <?php else: foreach ($minhaListaAtencao as $item): ?>
         <div class="attention-item">
           <strong><?= e($item['livro_titulo']) ?></strong>
@@ -239,7 +260,7 @@ require __DIR__ . '/includes/layout_topo.php';
             <?php else: ?>
               <span class="badge warn">Vence em <?= (int) $item['dias'] ?>d</span>
             <?php endif; ?>
-            <br><span class="mono" style="color:#8a8069;font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
+            <br><span class="mono" style="color:var(--texto-secundario);font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
           </div>
         </div>
       <?php endforeach; endif; ?>

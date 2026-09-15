@@ -43,6 +43,7 @@ CREATE TABLE leitores (
   nome            VARCHAR(150) NOT NULL,
   email           VARCHAR(150) NOT NULL UNIQUE,
   telefone        VARCHAR(30),
+  matricula       VARCHAR(30) NULL,
   senha_hash      VARCHAR(255) NULL,        -- preenchido quando o aluno cria sua senha em cadastro.php
   status          ENUM('ativo', 'bloqueado') NOT NULL DEFAULT 'ativo',
   data_cadastro   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -58,6 +59,10 @@ CREATE TABLE livros (
   autor                  VARCHAR(150) NOT NULL,
   categoria_id           INT UNSIGNED NOT NULL,
   ano_publicacao         SMALLINT UNSIGNED,
+  editora                VARCHAR(150) NULL,
+  isbn                   VARCHAR(20) NULL,
+  descricao              TEXT NULL,
+  capa_url               VARCHAR(500) NULL,   -- URL/caminho da capa; nulo usa uma capa padrão
   exemplares_total       INT UNSIGNED NOT NULL DEFAULT 1,
   exemplares_disponiveis INT UNSIGNED NOT NULL DEFAULT 1,
   criado_em              DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -80,9 +85,10 @@ CREATE TABLE emprestimos (
   data_emprestimo   DATE NOT NULL,
   data_prevista     DATE NOT NULL,           -- prazo de devolução
   data_devolucao    DATE NULL,               -- preenchido quando devolvido
-  status            ENUM('ativo', 'atrasado', 'devolvido') NOT NULL DEFAULT 'ativo',
-  renovacoes        TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  criado_em         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status                ENUM('ativo', 'atrasado', 'devolvido') NOT NULL DEFAULT 'ativo',
+  renovacoes            TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  renovacao_solicitada  TINYINT(1) NOT NULL DEFAULT 0,   -- aluno pediu renovação; aguarda aprovação do admin
+  criado_em             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_emp_livro
     FOREIGN KEY (livro_id) REFERENCES livros(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -110,6 +116,40 @@ CREATE TABLE reservas (
   CONSTRAINT fk_res_leitor
     FOREIGN KEY (leitor_id) REFERENCES leitores(id)
     ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------
+-- NOTIFICAÇÕES (avisos de prazo, renovação, reserva disponível...)
+-- usuario_tipo + usuario_id aponta para administradores OU leitores,
+-- conforme o tipo — sem FK direta, já que pode ser qualquer uma das duas.
+-- ---------------------------------------------------------
+CREATE TABLE notificacoes (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_tipo   ENUM('admin', 'aluno') NOT NULL,
+  usuario_id     INT UNSIGNED NOT NULL,
+  titulo         VARCHAR(150) NOT NULL,
+  mensagem       TEXT NOT NULL,
+  lida           TINYINT(1) NOT NULL DEFAULT 0,
+  data_criacao   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_notif_usuario ON notificacoes (usuario_tipo, usuario_id, lida);
+
+-- ---------------------------------------------------------
+-- FAVORITOS (livros marcados por um aluno para acompanhar depois)
+-- ---------------------------------------------------------
+CREATE TABLE favoritos (
+  id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  leitor_id        INT UNSIGNED NOT NULL,
+  livro_id         INT UNSIGNED NOT NULL,
+  data_adicionado  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_fav_leitor
+    FOREIGN KEY (leitor_id) REFERENCES leitores(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_fav_livro
+    FOREIGN KEY (livro_id) REFERENCES livros(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT uq_fav_leitor_livro UNIQUE (leitor_id, livro_id)
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------

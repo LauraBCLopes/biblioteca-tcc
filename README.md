@@ -13,6 +13,14 @@ e-mail) — o sistema identifica automaticamente qual é qual:
   consultar o acervo, ver os próprios empréstimos/prazos, pedir
   renovação e criar/cancelar suas próprias reservas.
 
+Administrador **não** se autocadastra pelo `cadastro.php` público (isso seria
+uma falha de segurança — qualquer visitante viraria administrador). O
+primeiro é criado pelo terminal (`scripts/seed_admin.php`, passo 4 abaixo);
+os demais só por um administrador já logado, na tela "Configurações", com um
+limite de **2 administradores no total**. Uma conta de aluno nunca pode virar
+administrador (nem o contrário) — o sistema bloqueia e-mail duplicado entre
+as duas tabelas nos dois sentidos.
+
 ## Pré-requisitos
 
 - PHP 7.2+ (o projeto evita recursos exclusivos de PHP 8) com a extensão `pdo_mysql` habilitada
@@ -87,6 +95,21 @@ login. Alunos não precisam desse passo: eles criam a própria conta em
 > coluna de senha na tabela `leitores`. Quem for importar `sql/schema.sql`
 > do zero não precisa desse passo.
 
+> Se o banco já existia **antes** da atualização "Bibliotech" (rebranding +
+> novos campos), rode também `sql/migracao_etapa2_bibliotech.sql` — adiciona
+> os campos `editora`, `isbn`, `descricao`, `capa_url` (livros) e `matricula`
+> (leitores), além das tabelas `notificacoes` e `favoritos`. No Supabase, use
+> a versão `sql/migracao_etapa2_bibliotech_supabase.sql` no SQL Editor. Quem
+> for importar `sql/schema.sql`/`sql/schema_supabase.sql` do zero não precisa
+> desse passo.
+
+> Se o banco já existia **antes** da solicitação de renovação, rode também
+> `sql/migracao_etapa6_renovacao.sql` — adiciona a coluna
+> `renovacao_solicitada` em `emprestimos`, usada pelo fluxo de aprovação
+> (ver "Sobre a renovação"). No Supabase, use
+> `sql/migracao_etapa6_renovacao_supabase.sql`. Quem for importar o schema do
+> zero não precisa desse passo.
+
 ### 5. Rodar o projeto
 Se estiver usando XAMPP/Laragon, inicie o Apache e acesse:
 ```
@@ -114,6 +137,10 @@ biblioteca-tcc/
 ├── sql/migracao_login_aluno.sql → adiciona login de aluno a um banco já existente
 ├── login.php / logout.php     → login único (admin ou aluno, pelo e-mail) / encerra a sessão
 ├── cadastro.php                → autocadastro de aluno (cria a própria conta)
+├── recuperar-senha.php         → redefinição de senha
+├── configuracoes.php           → dados da conta e troca de senha (admin ou aluno);
+│                                  admin também cadastra outros administradores aqui (limite: 2)
+├── relatorios.php              → relatórios por período + exportação CSV (?exportar=csv), admin
 ├── index.php                  → painel: estatísticas (admin) ou meus empréstimos/reservas (aluno)
 ├── livros.php                  → catálogo + cadastro/edição (?editar=ID) + exclusão (?excluir=ID), admin
 ├── leitores.php                → gestão de leitores: cadastro/edição, exclusão (?excluir=ID),
@@ -168,3 +195,32 @@ uso do sistema mantém os status em dia.
 Reservas ficam em fila por livro (ordem de chegada). Quando há exemplar
 disponível, o administrador usa "Atender" para converter a reserva em
 empréstimo. Alunos só veem e cancelam as próprias reservas.
+
+## Sobre a renovação
+
+O aluno não renova sozinho: ao clicar em "Renovar", o pedido fica
+**aguardando aprovação** (coluna `renovacao_solicitada`), e o administrador
+aprova (aplica +7 dias) ou recusa na tela de empréstimos. O administrador,
+quando renova, já renova direto. Em qualquer caso o limite é de 2 renovações
+por empréstimo, e não se renova empréstimo atrasado nem título com outro
+leitor na fila de reserva.
+
+## Sobre os relatórios
+
+Página exclusiva do administrador (`relatorios.php`), com o período escolhido
+por atalho (30 dias, 90 dias, 12 meses) ou por datas livres — o período fica
+na URL, então dá pra copiar/colar o link do relatório. Mostra:
+
+- **Resumo do período**: empréstimos, devoluções, % devolvido no prazo,
+  atrasados no momento, renovações aguardando aprovação e novos leitores.
+- **Movimentação mês a mês**: empréstimos e devoluções lado a lado.
+- **Livros mais emprestados** e **empréstimos por categoria** no período.
+- **Leitores mais ativos** no período.
+- **Atrasos em aberto**: situação de hoje, independente do período.
+
+O botão "Exportar CSV" baixa a movimentação do período (`?exportar=csv`) com
+separador `;` e BOM UTF-8, pra abrir direto no Excel sem quebrar os acentos.
+
+> Os agrupamentos por mês são feitos no PHP, e não com `DATE_FORMAT`/`TO_CHAR`,
+> para a mesma consulta funcionar tanto no MySQL local quanto no Postgres do
+> Supabase — mesma escolha já usada no cálculo de prazos do resto do sistema.
