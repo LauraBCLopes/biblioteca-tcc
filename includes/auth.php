@@ -107,7 +107,15 @@ function requireLogin(): void
         header('Location: login.php');
         exit;
     }
-    atualizarAtrasos();
+
+    // atualizarAtrasos() faz 2 UPDATEs no banco; rodar em toda página
+    // carregada é caro (Vercel/iad1 -> Supabase/sa-east-1 é uma viagem
+    // longa). Basta checar uma vez a cada alguns minutos por sessão.
+    $ultimaChecagem = $_SESSION['atrasos_verificados_em'] ?? 0;
+    if (time() - $ultimaChecagem > 300) {
+        atualizarAtrasos();
+        $_SESSION['atrasos_verificados_em'] = time();
+    }
 }
 
 /**
