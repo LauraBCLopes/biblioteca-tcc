@@ -87,7 +87,7 @@ function criarNotificacao(PDO $pdo, string $usuarioTipo, int $usuarioId, string 
     }
 
     $stmt = $pdo->prepare('INSERT INTO notificacoes (usuario_tipo, usuario_id, titulo, mensagem, lida, data_criacao)
-        VALUES (:tipo, :id, :titulo, :mensagem, 0, :agora)');
+        VALUES (:tipo, :id, :titulo, :mensagem, FALSE, :agora)');
     $stmt->execute([
         'tipo'    => $usuarioTipo,
         'id'      => $usuarioId,
@@ -95,6 +95,16 @@ function criarNotificacao(PDO $pdo, string $usuarioTipo, int $usuarioId, string 
         'mensagem'=> $mensagem,
         'agora'   => date('Y-m-d H:i:s'),
     ]);
+}
+
+/**
+ * Normaliza uma coluna boolean vinda do banco para um bool PHP de verdade.
+ * Necessário porque o PDO_PGSQL devolve 't'/'f' (strings, e ambas são
+ * "truthy" em PHP), enquanto o MySQL devolve '1'/'0'.
+ */
+function bdBool($valor): bool
+{
+    return $valor === true || $valor === 1 || $valor === '1' || $valor === 't';
 }
 
 /** Gera as iniciais (até 2 letras) de um nome, usadas no avatar circular. */

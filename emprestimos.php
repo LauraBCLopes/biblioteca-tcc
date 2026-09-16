@@ -124,7 +124,7 @@ function aplicarRenovacao(PDO $pdo, int $idRenovar, string $dataPrevistaAtual): 
     $novaPrevista = date('Y-m-d', strtotime($dataPrevistaAtual . ' +7 days'));
 
     $stmt = $pdo->prepare('UPDATE emprestimos
-        SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1, renovacao_solicitada = 0
+        SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1, renovacao_solicitada = FALSE
         WHERE id = :id');
     $stmt->execute(['nova_prevista' => $novaPrevista, 'id' => $idRenovar]);
 }
@@ -180,7 +180,7 @@ if (!empty($_GET['renovar'])) {
         if (temReservaConcorrente($pdo, (int) $emprestimo['livro_id'], (int) $emprestimo['leitor_id'])) {
             flash('Não é possível solicitar renovação: outro leitor está na fila de reserva deste livro.', 'erro');
         } else {
-            $stmt = $pdo->prepare('UPDATE emprestimos SET renovacao_solicitada = 1 WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE emprestimos SET renovacao_solicitada = TRUE WHERE id = :id');
             $stmt->execute(['id' => $idRenovar]);
             flash('Solicitação de renovação enviada. Aguarde a aprovação da biblioteca.');
         }
@@ -200,7 +200,7 @@ if (!empty($_GET['aprovar_renovacao']) || !empty($_GET['recusar_renovacao'])) {
     $stmt->execute(['id' => $idSolicitacao]);
     $emprestimo = $stmt->fetch();
 
-    if (!$emprestimo || !$emprestimo['renovacao_solicitada']) {
+    if (!$emprestimo || !bdBool($emprestimo['renovacao_solicitada'])) {
         flash('Não há solicitação de renovação pendente para este empréstimo.', 'erro');
         header('Location: emprestimos.php');
         exit;
@@ -210,7 +210,7 @@ if (!empty($_GET['aprovar_renovacao']) || !empty($_GET['recusar_renovacao'])) {
         aplicarRenovacao($pdo, $idSolicitacao, $emprestimo['data_prevista']);
         flash('Renovação aprovada: novo prazo de mais 7 dias.');
     } else {
-        $stmt = $pdo->prepare('UPDATE emprestimos SET renovacao_solicitada = 0 WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE emprestimos SET renovacao_solicitada = FALSE WHERE id = :id');
         $stmt->execute(['id' => $idSolicitacao]);
         flash('Solicitação de renovação recusada.');
     }
@@ -371,13 +371,13 @@ require __DIR__ . '/includes/layout_topo.php';
               <td><span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span></td>
               <td class="mono">
                 <?= (int) $e['renovacoes'] ?>/2
-                <?php if ($e['renovacao_solicitada']): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
+                <?php if (bdBool($e['renovacao_solicitada'])): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
               </td>
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <?php if ($e['status'] !== 'devolvido'): ?>
                   <?php if (isAdmin()): ?>
                     <a class="btn primary small" href="?devolver=<?= (int) $e['id'] ?>">Devolver</a>
-                    <?php if ($e['renovacao_solicitada']): ?>
+                    <?php if (bdBool($e['renovacao_solicitada'])): ?>
                       <a class="btn primary small" href="?aprovar_renovacao=<?= (int) $e['id'] ?>">Aprovar renovação</a>
                       <a class="btn danger small" href="?recusar_renovacao=<?= (int) $e['id'] ?>">Recusar</a>
                     <?php elseif ($podeRenovar): ?>
@@ -386,7 +386,7 @@ require __DIR__ . '/includes/layout_topo.php';
                       <button class="btn ghost small" disabled>Renovar</button>
                     <?php endif; ?>
                   <?php else: ?>
-                    <?php if ($e['renovacao_solicitada']): ?>
+                    <?php if (bdBool($e['renovacao_solicitada'])): ?>
                       <button class="btn ghost small" disabled>Aguardando aprovação</button>
                     <?php elseif ($podeRenovar): ?>
                       <a class="btn ghost small" href="?renovar=<?= (int) $e['id'] ?>">Solicitar renovação</a>
