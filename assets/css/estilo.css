@@ -238,6 +238,46 @@ tbody tr:hover{ background: var(--fundo); }
 .attention-item{ display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 0; border-bottom:1px solid var(--linha); font-size:13px; }
 .attention-item:last-child{ border-bottom:none; }
 
+.dash-grid.igual{ grid-template-columns: 1fr 1fr; }
+@media (max-width: 900px){ .dash-grid.igual{ grid-template-columns: 1fr; } }
+.panel .sub{ font-size:12.5px; color:var(--texto-secundario); margin:-10px 0 16px; }
+
+/* Gráfico de colunas agrupadas (empréstimos x devoluções por mês) */
+:root{ --serie-1: #6C63E8; --serie-2: #1F9AA8; }
+.legenda{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--texto-secundario); margin-bottom:14px; }
+.legenda span{ display:inline-flex; align-items:center; gap:6px; }
+.legenda i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+.col-chart-wrap{ overflow-x:auto; }
+.col-chart{ display:flex; align-items:stretch; gap:8px; height:180px; border-bottom:1px solid var(--linha); min-width: max-content; }
+.col-grupo{ flex:1; min-width:44px; display:flex; flex-direction:column; }
+.col-barras{ flex:1; display:flex; align-items:flex-end; justify-content:center; gap:2px; }
+.col{ position:relative; width:14px; min-height:2px; border-radius:4px 4px 0 0; cursor:default; }
+.col.s1{ background: var(--serie-1); }
+.col.s2{ background: var(--serie-2); }
+.col .tip{
+  display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); white-space:nowrap;
+  background: var(--texto); color:#fff; font-size:11.5px; padding:5px 8px; border-radius:6px; z-index:5; pointer-events:none;
+}
+.col:hover .tip, .col:focus .tip{ display:block; }
+.col:hover, .col:focus{ outline:2px solid var(--branco); box-shadow:0 0 0 4px rgba(32,36,90,0.15); }
+.col-rotulos{ display:flex; gap:8px; min-width:max-content; }
+.col-rotulos div{ flex:1; min-width:44px; text-align:center; font-size:11px; color:var(--texto-secundario); padding-top:6px; }
+
+/* Barra empilhada de situação (no prazo / vencendo / atrasado) */
+.stack{ display:flex; gap:2px; height:14px; border-radius:20px; overflow:hidden; background: var(--lavanda); margin-bottom:12px; }
+.stack div{ height:100%; }
+.stack-legenda{ display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap:10px; font-size:12.5px; }
+.stack-legenda strong{ display:block; font-size:18px; color:var(--texto); }
+.stack-legenda span{ color:var(--texto-secundario); display:inline-flex; align-items:center; gap:6px; }
+.stack-legenda i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+/* Medidor de percentual */
+.meter-valor{ font-size:30px; font-weight:700; color:var(--texto); }
+.meter-valor small{ font-size:14px; color:var(--texto-secundario); font-weight:600; }
+.mini-stats{ display:grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap:12px; margin-top:16px; }
+.mini-stats div{ background: var(--fundo); border:1px solid var(--linha); border-radius: var(--radius-sm); padding:10px 12px; font-size:12px; color:var(--texto-secundario); }
+.mini-stats strong{ display:block; font-size:20px; color:var(--texto); }
+
 .quick-actions{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
 .quick-action{
   display:flex; align-items:center; gap:12px; background:var(--branco); border:1px solid var(--linha);

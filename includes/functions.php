@@ -116,3 +116,77 @@ function iniciaisNome(string $nome): string
     }
     return $iniciais;
 }
+
+/** Abreviação dos meses em português, indexada por 'MM'. */
+const MESES_ABREV = ['01'=>'jan','02'=>'fev','03'=>'mar','04'=>'abr','05'=>'mai','06'=>'jun',
+                     '07'=>'jul','08'=>'ago','09'=>'set','10'=>'out','11'=>'nov','12'=>'dez'];
+
+/**
+ * Conta empréstimos e devoluções por mês ('AAAA-MM') entre $de e $ate.
+ * Agrupamento feito no PHP: MySQL usa DATE_FORMAT e Postgres usa TO_CHAR,
+ * então buscar as datas e contar aqui mantém uma única versão da consulta.
+ * Limita a 24 meses para o gráfico continuar legível.
+ */
+function movimentoPorMes(PDO $pdo, string $de, string $ate): array
+{
+    $meses = [];
+    $cursor = new DateTime(substr($de, 0, 7) . '-01');
+    $ultimoMes = new DateTime(substr($ate, 0, 7) . '-01');
+    while ($cursor <= $ultimoMes && count($meses) < 24) {
+        $meses[$cursor->format('Y-m')] = ['emprestimos' => 0, 'devolucoes' => 0];
+        $cursor->modify('+1 month');
+    }
+
+    // placeholders distintos para cada BETWEEN: com EMULATE_PREPARES desligado,
+    // o mesmo nome não pode aparecer duas vezes na consulta
+    $stmt = $pdo->prepare('SELECT data_emprestimo, data_devolucao FROM emprestimos
+        WHERE data_emprestimo BETWEEN :de_emp AND :ate_emp
+           OR data_devolucao  BETWEEN :de_dev AND :ate_dev');
+    $stmt->execute(['de_emp' => $de, 'ate_emp' => $ate, 'de_dev' => $de, 'ate_dev' => $ate]);
+
+    foreach ($stmt->fetchAll() as $linha) {
+        $emp = (string) $linha['data_emprestimo'];
+        if ($emp >= $de && $emp <= $ate && isset($meses[substr($emp, 0, 7)])) {
+            $meses[substr($emp, 0, 7)]['emprestimos']++;
+        }
+        $dev = (string) $linha['data_devolucao'];
+        if ($dev !== '' && $dev >= $de && $dev <= $ate && isset($meses[substr($dev, 0, 7)])) {
+            $meses[substr($dev, 0, 7)]['devolucoes']++;
+        }
+    }
+    return $meses;
+}
+
+/**
+ * Gráfico de colunas agrupadas (empréstimos x devoluções por mês), em HTML/CSS puro.
+ * Cada coluna mostra o valor exato ao passar o mouse (ou focar pelo teclado).
+ */
+function graficoMovimento(array $meses): string
+{
+    $maior = 1;
+    foreach ($meses as $d) {
+        $maior = max($maior, $d['emprestimos'], $d['devolucoes']);
+    }
+
+    $colunas = '';
+    $rotulos = '';
+    foreach ($meses as $chave => $d) {
+        [$ano, $mes] = explode('-', $chave);
+        $nomeMes = MESES_ABREV[$mes] . '/' . substr($ano, 2);
+        $colunas .= '<div class="col-grupo"><div class="col-barras">';
+        foreach (['emprestimos' => ['s1', 'empréstimo'], 'devolucoes' => ['s2', 'devolução']] as $campo => [$classe, $nome]) {
+            $qtd = (int) $d[$campo];
+            $plural = $qtd === 1 ? $nome : ($campo === 'emprestimos' ? 'empréstimos' : 'devoluções');
+            $colunas .= '<div class="col ' . $classe . '" tabindex="0" style="height:' . round(($qtd / $maior) * 100, 1) . '%"'
+                      . ' aria-label="' . e("$nomeMes: $qtd $plural") . '">'
+                      . '<span class="tip">' . e("$nomeMes · $qtd $plural") . '</span></div>';
+        }
+        $colunas .= '</div></div>';
+        $rotulos .= '<div>' . e($nomeMes) . '</div>';
+    }
+
+    return '<div class="legenda"><span><i style="background:var(--serie-1)"></i>Empréstimos</span>'
+         . '<span><i style="background:var(--serie-2)"></i>Devoluções</span></div>'
+         . '<div class="col-chart-wrap"><div class="col-chart">' . $colunas . '</div>'
+         . '<div class="col-rotulos">' . $rotulos . '</div></div>';
+}

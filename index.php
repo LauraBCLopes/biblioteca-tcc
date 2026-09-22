@@ -71,6 +71,62 @@ if (isAdmin()) {
          ORDER BY qtd DESC
          LIMIT 5"
     )->fetchAll();
+
+    $renovacoesPendentes = (int) $pdo->query('SELECT COUNT(*) FROM emprestimos WHERE renovacao_solicitada = TRUE')->fetchColumn();
+
+    // --- ocupação do acervo: quanto dos exemplares está fora da estante ---
+    $exemplaresFora    = $totalExemplares - $totalDisponiveis;
+    $percentualOcupado = $totalExemplares > 0 ? (int) round(($exemplaresFora / $totalExemplares) * 100) : 0;
+    $titulosEsgotados  = (int) $pdo->query('SELECT COUNT(*) FROM livros WHERE exemplares_total > 0 AND exemplares_disponiveis = 0')->fetchColumn();
+    $nuncaEmprestados  = (int) $pdo->query('SELECT COUNT(*) FROM livros l WHERE NOT EXISTS (SELECT 1 FROM emprestimos e WHERE e.livro_id = l.id)')->fetchColumn();
+    $leitoresComAtraso = (int) $pdo->query("SELECT COUNT(DISTINCT leitor_id) FROM emprestimos WHERE status = 'atrasado'")->fetchColumn();
+
+    // --- situação dos empréstimos em circulação (ativos já inclui os atrasados) ---
+    $circulacaoNoPrazo = max(0, $emprestimosAtivos - $emprestimosAtrasados - $vencendoEmBreve);
+
+    // --- movimentação dos últimos 6 meses (mês atual incluído) ---
+    $mesesPainel = movimentoPorMes($pdo, date('Y-m-01', strtotime('first day of -5 months')), $hoje);
+
+    // --- demanda reprimida: títulos com fila de reserva ---
+    $filaReservas = $pdo->query(
+        "SELECT l.id, l.titulo, l.exemplares_disponiveis, l.exemplares_total, COUNT(*) AS fila
+         FROM reservas r
+         JOIN livros l ON l.id = r.livro_id
+         WHERE r.status = 'pendente'
+         GROUP BY l.id, l.titulo, l.exemplares_disponiveis, l.exemplares_total
+         ORDER BY fila DESC, l.titulo ASC
+         LIMIT 5"
+    )->fetchAll();
+
+    // --- atividade recente: últimos empréstimos e devoluções, juntados no PHP ---
+    $atividade = [];
+    $ultimosEmprestimos = $pdo->query(
+        "SELECT e.id, e.data_emprestimo AS data, l.titulo AS livro_titulo, r.nome AS leitor_nome
+         FROM emprestimos e
+         JOIN livros l   ON l.id = e.livro_id
+         JOIN leitores r ON r.id = e.leitor_id
+         ORDER BY e.data_emprestimo DESC, e.id DESC
+         LIMIT 6"
+    )->fetchAll();
+    foreach ($ultimosEmprestimos as $linha) {
+        $atividade[] = $linha + ['tipo' => 'emprestimo'];
+    }
+    $ultimasDevolucoes = $pdo->query(
+        "SELECT e.id, e.data_devolucao AS data, l.titulo AS livro_titulo, r.nome AS leitor_nome
+         FROM emprestimos e
+         JOIN livros l   ON l.id = e.livro_id
+         JOIN leitores r ON r.id = e.leitor_id
+         WHERE e.data_devolucao IS NOT NULL
+         ORDER BY e.data_devolucao DESC, e.id DESC
+         LIMIT 6"
+    )->fetchAll();
+    foreach ($ultimasDevolucoes as $linha) {
+        $atividade[] = $linha + ['tipo' => 'devolucao'];
+    }
+    usort($atividade, function ($a, $b) {
+        return [$b['data'], $b['id']] <=> [$a['data'], $a['id']];
+    });
+    $atividade = array_slice($atividade, 0, 6);
 } else {
     // --- números dos PRÓPRIOS empréstimos e reservas do aluno logado ---
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos WHERE leitor_id = :id AND status IN ('ativo','atrasado')");
@@ -101,6 +157,83 @@ if (isAdmin()) {
     );
     $stmt->execute(['id' => $admin['id'], 'hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
     $minhaListaAtencao = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
+
+    // --- meu histórico de leitura (empréstimos já devolvidos) ---
+    $stmt = $pdo->prepare("SELECT data_devolucao, data_prevista FROM emprestimos WHERE leitor_id = :id AND data_devolucao IS NOT NULL");
+    $stmt->execute(['id' => $admin['id']]);
+    $meusDevolvidos = $stmt->fetchAll();
+    $inicioAno = date('Y-01-01');
+    $lidosEsteAno = 0;
+    $devolvidosNoPrazo = 0;
+    foreach ($meusDevolvidos as $linha) {
+        if ($linha['data_devolucao'] >= $inicioAno) {
+            $lidosEsteAno++;
+        }
+        if ($linha['data_devolucao'] <= $linha['data_prevista']) {
+            $devolvidosNoPrazo++;
+        }
+    }
+    $livrosLidos = count($meusDevolvidos);
+    $meuPercentualNoPrazo = $livrosLidos > 0 ? (int) round(($devolvidosNoPrazo / $livrosLidos) * 100) : null;
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM favoritos WHERE leitor_id = :id');
+    $stmt->execute(['id' => $admin['id']]);
+    $meusFavoritos = (int) $stmt->fetchColumn();
+
+    // --- o que eu mais leio, por categoria ---
+    $stmt = $pdo->prepare(
+        "SELECT c.id, c.nome, COUNT(*) AS qtd
+         FROM emprestimos e
+         JOIN livros l     ON l.id = e.livro_id
+         JOIN categorias c ON c.id = l.categoria_id
+         WHERE e.leitor_id = :id
+         GROUP BY c.id, c.nome
+         ORDER BY qtd DESC, c.nome ASC"
+    );
+    $stmt->execute(['id' => $admin['id']]);
+    $minhasCategorias = $stmt->fetchAll();
+    $maxMinhaCategoria = $minhasCategorias ? max(1, ...array_map('intval', array_column($minhasCategorias, 'qtd'))) : 1;
+
+    // --- últimos livros que devolvi ---
+    $stmt = $pdo->prepare(
+        "SELECT l.id, l.titulo, l.autor, e.data_devolucao
+         FROM emprestimos e
+         JOIN livros l ON l.id = e.livro_id
+         WHERE e.leitor_id = :id AND e.data_devolucao IS NOT NULL
+         ORDER BY e.data_devolucao DESC, e.id DESC
+         LIMIT 5"
+    );
+    $stmt->execute(['id' => $admin['id']]);
+    $meuHistorico = $stmt->fetchAll();
+
+    // --- sugestões: títulos disponíveis e populares que ainda não peguei,
+    //     priorizando a categoria que mais leio; se nunca li ou já esgotei
+    //     essa categoria, sugere do acervo todo ---
+    $buscarSugestoes = function (?int $categoriaId) use ($pdo, $admin): array {
+        $stmt = $pdo->prepare(
+            "SELECT l.id, l.titulo, l.autor, COUNT(e.id) AS popularidade
+             FROM livros l
+             LEFT JOIN emprestimos e ON e.livro_id = l.id
+             WHERE l.exemplares_disponiveis > 0
+               " . ($categoriaId ? 'AND l.categoria_id = :categoria' : '') . "
+               AND NOT EXISTS (SELECT 1 FROM emprestimos m WHERE m.livro_id = l.id AND m.leitor_id = :id)
+             GROUP BY l.id, l.titulo, l.autor
+             ORDER BY popularidade DESC, l.titulo ASC
+             LIMIT 4"
+        );
+        $params = ['id' => $admin['id']];
+        if ($categoriaId) {
+            $params['categoria'] = $categoriaId;
+        }
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    };
+    $categoriaSugerida = $minhasCategorias ? $minhasCategorias[0] : null;
+    $sugestoes = $categoriaSugerida ? $buscarSugestoes((int) $categoriaSugerida['id']) : [];
+    if (!$sugestoes) {
+        $categoriaSugerida = null;
+        $sugestoes = $buscarSugestoes(null);
+    }
 }
 
 $tituloAba = 'Painel';
@@ -152,6 +285,10 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="rotulo">Reservas pendentes</div>
         <div class="valor"><?= $reservasPendentes ?></div>
       </div>
+      <div class="stat-card <?= $renovacoesPendentes > 0 ? 'warn' : '' ?>">
+        <div class="rotulo">Renovações aguardando</div>
+        <div class="valor"><?= $renovacoesPendentes ?></div>
+      </div>
     </div>
 
     <div class="dash-grid">
@@ -199,6 +336,85 @@ require __DIR__ . '/includes/layout_topo.php';
           <div class="attention-item">
             <span><strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($item['titulo']) ?></span>
             <span class="mono" style="color:var(--texto-secundario);"><?= (int) $item['qtd'] ?>x</span>
+          </div>
+        <?php endforeach; endif; ?>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">Movimentação dos últimos 6 meses</h3>
+        <?= graficoMovimento($mesesPainel) ?>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">Ocupação do acervo</h3>
+        <div class="meter-valor"><?= $percentualOcupado ?>% <small>dos exemplares emprestados</small></div>
+        <div class="bar-track" style="margin-top:10px;" role="img" aria-label="<?= $exemplaresFora ?> de <?= $totalExemplares ?> exemplares emprestados">
+          <div class="bar-fill" style="width: <?= $percentualOcupado ?>%;"></div>
+        </div>
+        <p class="text-muted" style="font-size:12px;margin:8px 0 0;"><?= $exemplaresFora ?> de <?= $totalExemplares ?> exemplares fora da estante</p>
+        <div class="mini-stats">
+          <div><strong><?= $titulosEsgotados ?></strong>títulos esgotados</div>
+          <div><strong><?= $nuncaEmprestados ?></strong>nunca emprestados</div>
+          <div><strong><?= $leitoresComAtraso ?></strong>leitores com atraso</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-grid igual">
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">Situação da circulação</h3>
+        <?php if ($emprestimosAtivos === 0): ?>
+          <p class="text-muted" style="font-size:13px;">Nenhum livro emprestado no momento.</p>
+        <?php else: ?>
+          <div class="stack" role="img" aria-label="<?= e("No prazo: $circulacaoNoPrazo, vencendo em até 3 dias: $vencendoEmBreve, atrasados: $emprestimosAtrasados") ?>">
+            <?php foreach ([[$circulacaoNoPrazo, 'var(--ok)'], [$vencendoEmBreve, 'var(--aviso)'], [$emprestimosAtrasados, 'var(--alerta)']] as [$qtd, $cor]): if ($qtd > 0): ?>
+              <div style="width: <?= round(($qtd / $emprestimosAtivos) * 100, 1) ?>%; background: <?= $cor ?>;"></div>
+            <?php endif; endforeach; ?>
+          </div>
+          <div class="stack-legenda">
+            <div><span><i style="background:var(--ok)"></i>No prazo</span><strong><?= $circulacaoNoPrazo ?></strong></div>
+            <div><span><i style="background:var(--aviso)"></i>Vencendo (3 dias)</span><strong><?= $vencendoEmBreve ?></strong></div>
+            <div><span><i style="background:var(--alerta)"></i>Atrasados</span><strong><?= $emprestimosAtrasados ?></strong></div>
+          </div>
+        <?php endif; ?>
+
+        <h3 style="margin:24px 0 16px;">Fila de reservas</h3>
+        <?php if (!$filaReservas): ?>
+          <p class="text-muted" style="font-size:13px;">Nenhum título com reserva pendente.</p>
+        <?php else: foreach ($filaReservas as $item): ?>
+          <div class="attention-item">
+            <span>
+              <strong><?= e($item['titulo']) ?></strong><br>
+              <span class="text-muted" style="font-size:12px;"><?= (int) $item['exemplares_disponiveis'] ?> de <?= (int) $item['exemplares_total'] ?> disponíveis</span>
+            </span>
+            <span class="badge <?= (int) $item['exemplares_disponiveis'] === 0 ? 'warn' : 'muted' ?>"><?= (int) $item['fila'] ?> na fila</span>
+          </div>
+        <?php endforeach; endif; ?>
+        <div style="margin-top:16px;">
+          <a href="reservas.php" class="btn ghost small">Ver reservas</a>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">Atividade recente</h3>
+        <?php if (!$atividade): ?>
+          <p class="text-muted" style="font-size:13px;">Ainda não há movimentação registrada.</p>
+        <?php else: foreach ($atividade as $item): ?>
+          <div class="attention-item">
+            <span>
+              <strong><?= e($item['livro_titulo']) ?></strong><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($item['leitor_nome']) ?></span>
+            </span>
+            <span style="text-align:right;">
+              <?php if ($item['tipo'] === 'emprestimo'): ?>
+                <span class="badge muted">Emprestado</span>
+              <?php else: ?>
+                <span class="badge ok">Devolvido</span>
+              <?php endif; ?>
+              <br><span class="mono text-muted" style="font-size:11px;"><?= date('d/m/Y', strtotime($item['data'])) ?></span>
+            </span>
           </div>
         <?php endforeach; endif; ?>
       </div>
@@ -267,6 +483,79 @@ require __DIR__ . '/includes/layout_topo.php';
       <div style="margin-top:16px; display:flex; gap:10px;">
         <a href="emprestimos.php" class="btn ghost small">Ver meus empréstimos</a>
         <a href="livros.php" class="btn ghost small">Consultar o acervo</a>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 14px;">Minha jornada de leitura</h3>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="rotulo">Livros lidos</div>
+        <div class="valor"><?= $livrosLidos ?></div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Lidos em <?= date('Y') ?></div>
+        <div class="valor"><?= $lidosEsteAno ?></div>
+      </div>
+      <div class="stat-card <?= $meuPercentualNoPrazo !== null && $meuPercentualNoPrazo >= 80 ? 'ok' : ($meuPercentualNoPrazo !== null ? 'warn' : '') ?>">
+        <div class="rotulo">Devolvidos no prazo</div>
+        <div class="valor">
+          <?= $meuPercentualNoPrazo === null ? '—' : $meuPercentualNoPrazo . '<span style="font-size:16px;color:var(--texto-secundario);">%</span>' ?>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="rotulo">Meus favoritos</div>
+        <div class="valor"><?= $meusFavoritos ?></div>
+      </div>
+    </div>
+
+    <div class="dash-grid igual">
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">O que eu mais leio</h3>
+        <?php if (!$minhasCategorias): ?>
+          <p class="text-muted" style="font-size:13px;">Você ainda não pegou nenhum livro emprestado.</p>
+        <?php else: foreach ($minhasCategorias as $cat): ?>
+          <div class="bar-row">
+            <div class="rotulo"><?= e($cat['nome']) ?></div>
+            <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maxMinhaCategoria) * 100) ?>%;"></div></div>
+            <div class="qtd"><?= (int) $cat['qtd'] ?></div>
+          </div>
+        <?php endforeach; endif; ?>
+
+        <h3 style="margin:24px 0 16px;">Lidos recentemente</h3>
+        <?php if (!$meuHistorico): ?>
+          <p class="text-muted" style="font-size:13px;">Os livros que você devolver aparecem aqui.</p>
+        <?php else: foreach ($meuHistorico as $item): ?>
+          <div class="attention-item">
+            <span>
+              <a href="livros.php?ver=<?= (int) $item['id'] ?>"><strong><?= e($item['titulo']) ?></strong></a><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($item['autor']) ?></span>
+            </span>
+            <span class="mono text-muted" style="font-size:11px;"><?= date('d/m/Y', strtotime($item['data_devolucao'])) ?></span>
+          </div>
+        <?php endforeach; endif; ?>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-bottom:16px;">Sugestões para você</h3>
+        <p class="sub">
+          <?= $categoriaSugerida
+              ? 'Títulos disponíveis de ' . e($categoriaSugerida['nome']) . ', a categoria que você mais lê, que você ainda não pegou.'
+              : 'Os títulos disponíveis mais procurados do acervo que você ainda não pegou.' ?>
+        </p>
+        <?php if (!$sugestoes): ?>
+          <p class="text-muted" style="font-size:13px;">Nenhuma sugestão no momento — você já leu tudo o que está disponível por aqui!</p>
+        <?php else: foreach ($sugestoes as $item): ?>
+          <div class="attention-item">
+            <span>
+              <a href="livros.php?ver=<?= (int) $item['id'] ?>"><strong><?= e($item['titulo']) ?></strong></a><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($item['autor']) ?></span>
+            </span>
+            <span class="badge ok">Disponível</span>
+          </div>
+        <?php endforeach; endif; ?>
+        <div style="margin-top:16px;">
+          <a href="livros.php" class="btn ghost small">Explorar o acervo</a>
+        </div>
       </div>
     </div>
 
