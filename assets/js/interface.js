@@ -75,4 +75,21 @@ document.addEventListener('DOMContentLoaded', function () {
       wrap.classList.remove('open');
     });
   });
+
+  // Configurações → Aparência: aplica o tema na hora (sem esperar o servidor)
+  // e envia o formulário para o PHP gravar a escolha no cookie.
+  var formTema = document.getElementById('form-tema');
+  if (formTema) {
+    formTema.querySelectorAll('input[name="tema"]').forEach(function (opcao) {
+      opcao.addEventListener('change', function () {
+        var raiz = document.documentElement;
+        if (opcao.value === 'sistema') {
+          raiz.removeAttribute('data-theme');
+        } else {
+          raiz.setAttribute('data-theme', opcao.value === 'escuro' ? 'dark' : 'light');
+        }
+        formTema.submit();
+      });
+    });
+  }
 });

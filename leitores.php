@@ -217,7 +217,7 @@ require __DIR__ . '/includes/layout_topo.php';
       <form method="get" style="display:contents;">
         <input type="search" name="busca" value="<?= e($busca) ?>"
                placeholder="Buscar por nome ou e-mail…"
-               style="border:1px solid var(--linha);background:#fff;padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;min-width:220px;">
+               style="border:1px solid var(--linha);background:var(--branco);padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;min-width:220px;">
         <button class="btn ghost small" type="submit">Buscar</button>
         <?php if ($busca !== ''): ?><a href="leitores.php" class="btn ghost small">Limpar</a><?php endif; ?>
       </form>

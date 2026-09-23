@@ -9,7 +9,7 @@
   --texto: #20245A;
   --texto-secundario: #667085;
   --linha: #E4E7F5;
-  --gradiente: linear-gradient(135deg, var(--roxo), var(--azul));
+  --gradiente: linear-gradient(135deg, #6C63E8, #3F7FE8);   /* fixo: mantém o contraste do texto branco nos dois temas */
   --sombra: 0 8px 24px rgba(108,99,232,0.12);
   --sombra-forte: 0 16px 40px rgba(63,52,140,0.22);
   --radius: 16px;
@@ -21,6 +21,68 @@
   --alerta: #d1495b;
   --alerta-bg: #fdeaec;
   --muted-bg: #eef0f7;
+  --sidebar-fim: #F7F6FF;
+  --serie-1: #6C63E8;
+  --serie-2: #1F9AA8;
+  color-scheme: light;
+}
+
+/* ---------- Tema escuro ----------
+   Escolhido em Configurações → Aparência (cookie "tema", aplicado pelo PHP
+   como data-theme no <html>). "Automático" não põe atributo nenhum e segue
+   o sistema pelo prefers-color-scheme. Os dois blocos abaixo têm os MESMOS
+   valores: um vale para o automático, o outro para a escolha explícita. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --roxo: #8B84F0;
+    --roxo-claro: #A59FF7;
+    --azul: #5B93F0;
+    --azul-claro: #1E2A4A;
+    --lavanda: #242849;
+    --fundo: #0F1226;
+    --branco: #181B35;
+    --texto: #E7E9F7;
+    --texto-secundario: #A0A6C3;
+    --linha: #2C3055;
+    --sombra: 0 8px 24px rgba(0,0,0,0.35);
+    --sombra-forte: 0 16px 40px rgba(0,0,0,0.55);
+    --ok: #4CC38A;
+    --ok-bg: #16332A;
+    --aviso: #E0B25C;
+    --aviso-bg: #3A2F18;
+    --alerta: #F07184;
+    --alerta-bg: #3D1D26;
+    --muted-bg: #262A47;
+    --sidebar-fim: #14172E;
+    --serie-1: #7F78EC;
+    --serie-2: #22A2B0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --roxo: #8B84F0;
+  --roxo-claro: #A59FF7;
+  --azul: #5B93F0;
+  --azul-claro: #1E2A4A;
+  --lavanda: #242849;
+  --fundo: #0F1226;
+  --branco: #181B35;
+  --texto: #E7E9F7;
+  --texto-secundario: #A0A6C3;
+  --linha: #2C3055;
+  --sombra: 0 8px 24px rgba(0,0,0,0.35);
+  --sombra-forte: 0 16px 40px rgba(0,0,0,0.55);
+  --ok: #4CC38A;
+  --ok-bg: #16332A;
+  --aviso: #E0B25C;
+  --aviso-bg: #3A2F18;
+  --alerta: #F07184;
+  --alerta-bg: #3D1D26;
+  --muted-bg: #262A47;
+  --sidebar-fim: #14172E;
+  --serie-1: #7F78EC;
+  --serie-2: #22A2B0;
+  color-scheme: dark;
 }
 *{ box-sizing: border-box; }
 html,body{ margin:0; padding:0; }
@@ -115,7 +177,7 @@ button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
 @media (max-width: 900px){ .app{ grid-template-columns: 1fr; } }
 
 .sidebar{
-  background: linear-gradient(180deg, #FFFFFF, #F7F6FF);
+  background: linear-gradient(180deg, var(--branco), var(--sidebar-fim));
   border-right: 1px solid var(--linha);
   padding: 26px 0 20px;
   position: sticky; top:0; height:100vh; overflow-y:auto;
@@ -159,7 +221,7 @@ button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
 .icon-btn{ position:relative; background: var(--lavanda); border:none; width:38px; height:38px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
 .icon-btn:hover{ background: var(--azul-claro); }
 .icon-btn svg{ width:18px; height:18px; color: var(--roxo); }
-.icon-btn .dot{ position:absolute; top:5px; right:6px; width:8px; height:8px; border-radius:50%; background: var(--alerta); border:1.5px solid #fff; }
+.icon-btn .dot{ position:absolute; top:5px; right:6px; width:8px; height:8px; border-radius:50%; background: var(--alerta); border:1.5px solid var(--branco); }
 
 .dropdown-wrap{ position:relative; }
 .dropdown{
@@ -253,13 +315,34 @@ tbody tr:hover{ background: var(--fundo); }
 }
 @media (max-width: 760px){ .dash-row > .panel{ grid-column: span 12; } }
 .dash-row > .panel > .bar-track{ flex:none; }
+/* Seletor de tema (Configurações → Aparência) */
+.tema-opcoes{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; border:none; padding:0; margin:0; }
+@media (max-width: 480px){ .tema-opcoes{ grid-template-columns: 1fr; } }
+.tema-opcao{ position:relative; cursor:pointer; }
+.tema-opcao input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+.tema-opcao .cartao{ display:block; border:1.5px solid var(--linha); border-radius: var(--radius-sm); padding:10px; background: var(--branco); transition: border-color .15s, box-shadow .15s; }
+.tema-opcao:hover .cartao{ border-color: var(--roxo-claro); }
+.tema-opcao input:checked + .cartao{ border-color: var(--roxo); box-shadow: 0 0 0 3px rgba(108,99,232,0.18); }
+.tema-opcao input:focus-visible + .cartao{ outline:2px solid var(--roxo); outline-offset:2px; }
+.tema-previa{ display:flex; height:58px; border-radius:6px; overflow:hidden; border:1px solid rgba(128,128,160,0.25); }
+.tema-previa .lado{ width:28%; }
+.tema-previa .corpo{ flex:1; padding:8px; display:flex; flex-direction:column; gap:5px; }
+.tema-previa .corpo i{ display:block; height:7px; border-radius:4px; }
+.tema-previa .corpo i:first-child{ width:60%; }
+.tema-previa.claro .lado{ background:#F7F6FF; } .tema-previa.claro .corpo{ background:#F8F9FF; } .tema-previa.claro i{ background:#DCD9FA; } .tema-previa.claro i:first-child{ background:#6C63E8; }
+.tema-previa.escuro .lado{ background:#14172E; } .tema-previa.escuro .corpo{ background:#0F1226; } .tema-previa.escuro i{ background:#2C3055; } .tema-previa.escuro i:first-child{ background:#8B84F0; }
+.tema-previa.sistema{ background: linear-gradient(135deg, #F8F9FF 50%, #0F1226 50%); }
+.tema-previa.sistema .lado{ background: transparent; } .tema-previa.sistema .corpo{ background: transparent; justify-content:center; align-items:center; }
+.tema-nome{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:9px; font-size:13px; font-weight:600; color: var(--texto); }
+.tema-nome small{ font-weight:500; color: var(--texto-secundario); font-size:11.5px; }
+.tema-opcao input:checked + .cartao .tema-nome::after{ content:'✓'; color: var(--roxo); font-weight:700; }
+
 .panel-rodape{ margin-top:auto; padding-top:16px; display:flex; gap:10px; flex-wrap:wrap; }
 .vazio{ color:var(--texto-secundario); font-size:13px; }
 
 .panel .sub{ font-size:12.5px; color:var(--texto-secundario); margin:-10px 0 16px; }
 
 /* Gráfico de colunas agrupadas (empréstimos x devoluções por mês) */
-:root{ --serie-1: #6C63E8; --serie-2: #1F9AA8; }
 .legenda{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--texto-secundario); margin-bottom:14px; }
 .legenda span{ display:inline-flex; align-items:center; gap:6px; }
 .legenda i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
@@ -272,7 +355,7 @@ tbody tr:hover{ background: var(--fundo); }
 .col.s2{ background: var(--serie-2); }
 .col .tip{
   display:none; position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); white-space:nowrap;
-  background: var(--texto); color:#fff; font-size:11.5px; padding:5px 8px; border-radius:6px; z-index:5; pointer-events:none;
+  background: var(--texto); color: var(--branco); font-size:11.5px; padding:5px 8px; border-radius:6px; z-index:5; pointer-events:none;
 }
 .col:hover .tip, .col:focus .tip{ display:block; }
 .col:hover, .col:focus{ outline:2px solid var(--branco); box-shadow:0 0 0 4px rgba(32,36,90,0.15); }

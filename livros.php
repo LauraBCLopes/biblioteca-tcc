@@ -428,7 +428,7 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="field" style="margin-top:14px;">
           <label>Descrição (opcional)</label>
           <textarea name="descricao" rows="3" placeholder="Resumo/sinopse do livro"
-                    style="border:1px solid var(--linha);background:#fff;padding:10px 12px;border-radius:var(--radius-sm);font-size:14px;font-family:'Inter',sans-serif;color:var(--texto);width:100%;resize:vertical;"><?= e($livroEditando['descricao'] ?? '') ?></textarea>
+                    style="border:1px solid var(--linha);background:var(--branco);padding:10px 12px;border-radius:var(--radius-sm);font-size:14px;font-family:'Inter',sans-serif;color:var(--texto);width:100%;resize:vertical;"><?= e($livroEditando['descricao'] ?? '') ?></textarea>
         </div>
 
         <div style="margin-top:16px; display:flex; gap:10px;">
@@ -454,7 +454,7 @@ require __DIR__ . '/includes/layout_topo.php';
         <?php if ($somenteFavoritos): ?><input type="hidden" name="favoritos" value="1"><?php endif; ?>
         <input type="search" name="busca" value="<?= e($busca) ?>"
                placeholder="Buscar por título ou autor…"
-               style="border:1px solid var(--linha);background:#fff;padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;min-width:220px;">
+               style="border:1px solid var(--linha);background:var(--branco);padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;min-width:220px;">
         <button class="btn ghost small" type="submit">Buscar</button>
       </form>
       <?php if (!isAdmin()): ?>

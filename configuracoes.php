@@ -16,6 +16,20 @@ const MAX_ADMINISTRADORES = 2;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? 'trocar_senha';
 
+    // ---------- aparência (tema claro/escuro) — admin ou aluno ----------
+    if ($acao === 'tema') {
+        $tema = $_POST['tema'] ?? 'sistema';
+        if (isset(TEMAS[$tema])) {
+            // atrás do proxy da Vercel o PHP recebe HTTP; o protocolo real vem no cabeçalho
+            $https = !empty($_SERVER['HTTPS']) || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+            // assinatura antiga de setcookie() para funcionar também no PHP 7.2 do XAMPP
+            setcookie('tema', $tema, time() + 365 * 24 * 60 * 60, '/', '', $https, true);
+            flash('Aparência alterada para: ' . TEMAS[$tema] . '.');
+        }
+        header('Location: configuracoes.php');
+        exit;
+    }
+
     // ---------- criar administrador — só administrador logado, até o limite ----------
     if ($acao === 'criar_admin') {
         if (!isAdmin()) {
@@ -123,6 +137,34 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="eyebrow">Configurações</div>
         <h2>Minha conta</h2>
       </div>
+    </div>
+
+    <div class="panel" style="max-width:480px;">
+      <h4 style="margin-bottom:6px;font-size:14px;">Aparência</h4>
+      <p class="text-muted" style="font-size:12.5px;margin:0 0 16px;">
+        Escolha as cores do sistema. Fica salvo neste navegador.
+      </p>
+      <form method="post" action="configuracoes.php" id="form-tema">
+        <input type="hidden" name="acao" value="tema">
+        <fieldset class="tema-opcoes">
+          <legend class="text-muted" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Tema</legend>
+          <?php foreach (TEMAS as $valor => $nome): ?>
+            <label class="tema-opcao">
+              <input type="radio" name="tema" value="<?= e($valor) ?>" <?= temaAtual() === $valor ? 'checked' : '' ?>>
+              <span class="cartao">
+                <span class="tema-previa <?= e($valor) ?>" aria-hidden="true">
+                  <span class="lado"></span>
+                  <span class="corpo"><?php if ($valor !== 'sistema'): ?><i></i><i></i><i></i><?php endif; ?></span>
+                </span>
+                <span class="tema-nome">
+                  <span><?= e($nome) ?><br><small><?= ['claro' => 'fundo branco', 'escuro' => 'fundo escuro', 'sistema' => 'segue o sistema'][$valor] ?></small></span>
+                </span>
+              </span>
+            </label>
+          <?php endforeach; ?>
+        </fieldset>
+        <noscript><button type="submit" class="btn primary small" style="margin-top:14px;">Salvar aparência</button></noscript>
+      </form>
     </div>
 
     <div class="panel" style="max-width:480px;">

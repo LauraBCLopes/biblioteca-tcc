@@ -190,3 +190,31 @@ function graficoMovimento(array $meses): string
          . '<div class="col-chart-wrap"><div class="col-chart">' . $colunas . '</div>'
          . '<div class="col-rotulos">' . $rotulos . '</div></div>';
 }
+
+/** Temas de cores disponíveis em Configurações → Aparência. */
+const TEMAS = ['claro' => 'Claro', 'escuro' => 'Escuro', 'sistema' => 'Automático'];
+
+/**
+ * Tema escolhido pela pessoa neste navegador (cookie "tema").
+ * Fica em cookie, e não no banco, para valer também nas telas de login
+ * (antes de saber quem é o usuário) e para não exigir migração.
+ */
+function temaAtual(): string
+{
+    $tema = $_COOKIE['tema'] ?? 'sistema';
+    return isset(TEMAS[$tema]) ? $tema : 'sistema';
+}
+
+/**
+ * Atributo data-theme para o <html>: força claro/escuro quando a pessoa
+ * escolheu um; no "Automático" não põe nada e o CSS segue o sistema.
+ * Vem pronto do PHP para a página já abrir no tema certo, sem piscar.
+ */
+function atributoTema(): string
+{
+    $tema = temaAtual();
+    if ($tema === 'sistema') {
+        return '';
+    }
+    return ' data-theme="' . ($tema === 'escuro' ? 'dark' : 'light') . '"';
+}
