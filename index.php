@@ -47,7 +47,7 @@ if (isAdmin()) {
          WHERE e.status = 'atrasado'
             OR (e.status = 'ativo' AND e.data_prevista BETWEEN :hoje AND :em_tres_dias)
          ORDER BY e.data_prevista ASC
-         LIMIT 8"
+         LIMIT 5"
     );
     $stmt->execute(['hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
     $listaAtencao = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
@@ -126,7 +126,7 @@ if (isAdmin()) {
     usort($atividade, function ($a, $b) {
         return [$b['data'], $b['id']] <=> [$a['data'], $a['id']];
     });
-    $atividade = array_slice($atividade, 0, 6);
+    $atividade = array_slice($atividade, 0, 5);
 } else {
     // --- números dos PRÓPRIOS empréstimos e reservas do aluno logado ---
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos WHERE leitor_id = :id AND status IN ('ativo','atrasado')");
@@ -257,23 +257,15 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="rotulo">Títulos no acervo</div>
         <div class="valor"><?= $totalLivros ?></div>
       </div>
-      <div class="stat-card ok">
-        <div class="rotulo">Exemplares disponíveis</div>
-        <div class="valor"><?= $totalDisponiveis ?> <span style="font-size:16px;color:var(--texto-secundario);">/ <?= $totalExemplares ?></span></div>
-      </div>
       <div class="stat-card">
         <div class="rotulo">Leitores cadastrados</div>
         <div class="valor"><?= $totalLeitores ?></div>
-      </div>
-      <div class="stat-card <?= $leitoresBloqueados > 0 ? 'alert' : '' ?>">
-        <div class="rotulo">Leitores bloqueados</div>
-        <div class="valor"><?= $leitoresBloqueados ?></div>
       </div>
       <div class="stat-card">
         <div class="rotulo">Empréstimos em circulação</div>
         <div class="valor"><?= $emprestimosAtivos ?></div>
       </div>
-      <div class="stat-card <?= $emprestimosAtrasados > 0 ? 'alert' : '' ?>">
+      <div class="stat-card <?= $emprestimosAtrasados > 0 ? 'alert' : 'ok' ?>">
         <div class="rotulo">Atrasados</div>
         <div class="valor"><?= $emprestimosAtrasados ?></div>
       </div>
@@ -289,18 +281,24 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="rotulo">Renovações aguardando</div>
         <div class="valor"><?= $renovacoesPendentes ?></div>
       </div>
+      <div class="stat-card <?= $leitoresBloqueados > 0 ? 'alert' : '' ?>">
+        <div class="rotulo">Leitores bloqueados</div>
+        <div class="valor"><?= $leitoresBloqueados ?></div>
+      </div>
     </div>
 
-    <div class="dash-grid">
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Empréstimos que pedem atenção</h3>
+    <!-- ===== 1. O que precisa de ação hoje ===== -->
+    <div class="secao-titulo">Precisa de atenção</div>
+    <div class="dash-row">
+      <div class="panel span-4">
+        <h3>Vencimentos e atrasos</h3>
         <?php if (!$listaAtencao): ?>
-          <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo atrasado ou vencendo nos próximos dias. 🎉</p>
+          <p class="vazio">Nenhum empréstimo atrasado ou vencendo nos próximos dias.</p>
         <?php else: foreach ($listaAtencao as $item): ?>
           <div class="attention-item">
             <div>
               <strong><?= e($item['livro_titulo']) ?></strong><br>
-              <span style="color:var(--texto-secundario);font-size:12px;"><?= e($item['leitor_nome']) ?></span>
+              <span class="text-muted" style="font-size:12px;"><?= e($item['leitor_nome']) ?></span>
             </div>
             <div style="text-align:right;">
               <?php if ($item['status'] === 'atrasado'): ?>
@@ -310,17 +308,107 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php else: ?>
                 <span class="badge warn">Vence em <?= (int) $item['dias'] ?>d</span>
               <?php endif; ?>
-              <br><span class="mono" style="color:var(--texto-secundario);font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
+              <br><span class="mono text-muted" style="font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
             </div>
           </div>
         <?php endforeach; endif; ?>
-        <div style="margin-top:16px;">
-          <a href="emprestimos.php" class="btn ghost small">Ver todos os empréstimos</a>
+        <div class="panel-rodape">
+          <a href="emprestimos.php" class="btn ghost small">Ver empréstimos</a>
         </div>
       </div>
 
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Acervo por categoria</h3>
+      <div class="panel span-4">
+        <h3>Fila de reservas</h3>
+        <?php if (!$filaReservas): ?>
+          <p class="vazio">Nenhum título com reserva pendente.</p>
+        <?php else: foreach ($filaReservas as $item): ?>
+          <div class="attention-item">
+            <div>
+              <strong><?= e($item['titulo']) ?></strong><br>
+              <span class="text-muted" style="font-size:12px;"><?= (int) $item['exemplares_disponiveis'] ?> de <?= (int) $item['exemplares_total'] ?> disponíveis</span>
+            </div>
+            <span class="badge <?= (int) $item['exemplares_disponiveis'] === 0 ? 'warn' : 'muted' ?>"><?= (int) $item['fila'] ?> na fila</span>
+          </div>
+        <?php endforeach; endif; ?>
+        <div class="panel-rodape">
+          <a href="reservas.php" class="btn ghost small">Ver reservas</a>
+        </div>
+      </div>
+
+      <div class="panel span-4">
+        <h3>Atividade recente</h3>
+        <?php if (!$atividade): ?>
+          <p class="vazio">Ainda não há movimentação registrada.</p>
+        <?php else: foreach ($atividade as $item): ?>
+          <div class="attention-item">
+            <div>
+              <strong><?= e($item['livro_titulo']) ?></strong><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($item['leitor_nome']) ?></span>
+            </div>
+            <div style="text-align:right;">
+              <?php if ($item['tipo'] === 'emprestimo'): ?>
+                <span class="badge muted">Emprestado</span>
+              <?php else: ?>
+                <span class="badge ok">Devolvido</span>
+              <?php endif; ?>
+              <br><span class="mono text-muted" style="font-size:11px;"><?= date('d/m/Y', strtotime($item['data'])) ?></span>
+            </div>
+          </div>
+        <?php endforeach; endif; ?>
+      </div>
+    </div>
+
+    <!-- ===== 2. Como a circulação está evoluindo ===== -->
+    <div class="secao-titulo">Circulação</div>
+    <div class="dash-row">
+      <div class="panel span-8">
+        <h3>Movimentação dos últimos 6 meses</h3>
+        <?= graficoMovimento($mesesPainel) ?>
+      </div>
+
+      <div class="panel span-4">
+        <h3>Situação dos empréstimos</h3>
+        <?php if ($emprestimosAtivos === 0): ?>
+          <p class="vazio">Nenhum livro emprestado no momento.</p>
+        <?php else: ?>
+          <div class="meter-valor"><?= $emprestimosAtivos ?> <small>em circulação</small></div>
+          <div class="stack" style="margin-top:12px;" role="img" aria-label="<?= e("No prazo: $circulacaoNoPrazo, vencendo em até 3 dias: $vencendoEmBreve, atrasados: $emprestimosAtrasados") ?>">
+            <?php foreach ([[$circulacaoNoPrazo, 'var(--ok)'], [$vencendoEmBreve, 'var(--aviso)'], [$emprestimosAtrasados, 'var(--alerta)']] as [$qtd, $cor]): if ($qtd > 0): ?>
+              <div style="width: <?= round(($qtd / $emprestimosAtivos) * 100, 1) ?>%; background: <?= $cor ?>;"></div>
+            <?php endif; endforeach; ?>
+          </div>
+          <?php foreach ([['No prazo', $circulacaoNoPrazo, 'var(--ok)'], ['Vencendo em até 3 dias', $vencendoEmBreve, 'var(--aviso)'], ['Atrasados', $emprestimosAtrasados, 'var(--alerta)']] as [$nome, $qtd, $cor]): ?>
+            <div class="attention-item">
+              <span style="display:inline-flex;align-items:center;gap:8px;"><i style="width:10px;height:10px;border-radius:3px;background:<?= $cor ?>;display:inline-block;"></i><?= $nome ?></span>
+              <strong class="mono"><?= $qtd ?></strong>
+            </div>
+          <?php endforeach; ?>
+          <div class="attention-item">
+            <span class="text-muted">Leitores com atraso</span>
+            <strong class="mono"><?= $leitoresComAtraso ?></strong>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <!-- ===== 3. Acervo ===== -->
+    <div class="secao-titulo">Acervo</div>
+    <div class="dash-row">
+      <div class="panel span-4">
+        <h3>Ocupação do acervo</h3>
+        <div class="meter-valor"><?= $percentualOcupado ?>% <small>emprestado</small></div>
+        <div class="bar-track" style="margin-top:10px;" role="img" aria-label="<?= $exemplaresFora ?> de <?= $totalExemplares ?> exemplares emprestados">
+          <div class="bar-fill" style="width: <?= $percentualOcupado ?>%;"></div>
+        </div>
+        <p class="text-muted" style="font-size:12px;margin:8px 0 0;"><?= $totalDisponiveis ?> de <?= $totalExemplares ?> exemplares disponíveis na estante</p>
+        <div class="mini-stats">
+          <div><strong><?= $titulosEsgotados ?></strong>títulos esgotados</div>
+          <div><strong><?= $nuncaEmprestados ?></strong>nunca emprestados</div>
+        </div>
+      </div>
+
+      <div class="panel span-4">
+        <h3>Títulos por categoria</h3>
         <?php foreach ($porCategoria as $cat): ?>
           <div class="bar-row">
             <div class="rotulo"><?= e($cat['nome']) ?></div>
@@ -328,99 +416,28 @@ require __DIR__ . '/includes/layout_topo.php';
             <div class="qtd"><?= (int) $cat['qtd'] ?></div>
           </div>
         <?php endforeach; ?>
+        <div class="panel-rodape">
+          <a href="livros.php" class="btn ghost small">Ver acervo</a>
+        </div>
+      </div>
 
-        <h3 style="margin:22px 0 16px;">Mais emprestados</h3>
+      <div class="panel span-4">
+        <h3>Mais emprestados</h3>
         <?php if (!$maisEmprestados): ?>
-          <p style="color:var(--texto-secundario);font-size:13px;">Ainda não há empréstimos registrados.</p>
+          <p class="vazio">Ainda não há empréstimos registrados.</p>
         <?php else: foreach ($maisEmprestados as $i => $item): ?>
           <div class="attention-item">
             <span><strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($item['titulo']) ?></span>
-            <span class="mono" style="color:var(--texto-secundario);"><?= (int) $item['qtd'] ?>x</span>
+            <span class="mono text-muted"><?= (int) $item['qtd'] ?>x</span>
           </div>
         <?php endforeach; endif; ?>
-      </div>
-    </div>
-
-    <div class="dash-grid">
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Movimentação dos últimos 6 meses</h3>
-        <?= graficoMovimento($mesesPainel) ?>
-      </div>
-
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Ocupação do acervo</h3>
-        <div class="meter-valor"><?= $percentualOcupado ?>% <small>dos exemplares emprestados</small></div>
-        <div class="bar-track" style="margin-top:10px;" role="img" aria-label="<?= $exemplaresFora ?> de <?= $totalExemplares ?> exemplares emprestados">
-          <div class="bar-fill" style="width: <?= $percentualOcupado ?>%;"></div>
-        </div>
-        <p class="text-muted" style="font-size:12px;margin:8px 0 0;"><?= $exemplaresFora ?> de <?= $totalExemplares ?> exemplares fora da estante</p>
-        <div class="mini-stats">
-          <div><strong><?= $titulosEsgotados ?></strong>títulos esgotados</div>
-          <div><strong><?= $nuncaEmprestados ?></strong>nunca emprestados</div>
-          <div><strong><?= $leitoresComAtraso ?></strong>leitores com atraso</div>
+        <div class="panel-rodape">
+          <a href="relatorios.php" class="btn ghost small">Ver relatórios</a>
         </div>
       </div>
     </div>
 
-    <div class="dash-grid igual">
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Situação da circulação</h3>
-        <?php if ($emprestimosAtivos === 0): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum livro emprestado no momento.</p>
-        <?php else: ?>
-          <div class="stack" role="img" aria-label="<?= e("No prazo: $circulacaoNoPrazo, vencendo em até 3 dias: $vencendoEmBreve, atrasados: $emprestimosAtrasados") ?>">
-            <?php foreach ([[$circulacaoNoPrazo, 'var(--ok)'], [$vencendoEmBreve, 'var(--aviso)'], [$emprestimosAtrasados, 'var(--alerta)']] as [$qtd, $cor]): if ($qtd > 0): ?>
-              <div style="width: <?= round(($qtd / $emprestimosAtivos) * 100, 1) ?>%; background: <?= $cor ?>;"></div>
-            <?php endif; endforeach; ?>
-          </div>
-          <div class="stack-legenda">
-            <div><span><i style="background:var(--ok)"></i>No prazo</span><strong><?= $circulacaoNoPrazo ?></strong></div>
-            <div><span><i style="background:var(--aviso)"></i>Vencendo (3 dias)</span><strong><?= $vencendoEmBreve ?></strong></div>
-            <div><span><i style="background:var(--alerta)"></i>Atrasados</span><strong><?= $emprestimosAtrasados ?></strong></div>
-          </div>
-        <?php endif; ?>
-
-        <h3 style="margin:24px 0 16px;">Fila de reservas</h3>
-        <?php if (!$filaReservas): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum título com reserva pendente.</p>
-        <?php else: foreach ($filaReservas as $item): ?>
-          <div class="attention-item">
-            <span>
-              <strong><?= e($item['titulo']) ?></strong><br>
-              <span class="text-muted" style="font-size:12px;"><?= (int) $item['exemplares_disponiveis'] ?> de <?= (int) $item['exemplares_total'] ?> disponíveis</span>
-            </span>
-            <span class="badge <?= (int) $item['exemplares_disponiveis'] === 0 ? 'warn' : 'muted' ?>"><?= (int) $item['fila'] ?> na fila</span>
-          </div>
-        <?php endforeach; endif; ?>
-        <div style="margin-top:16px;">
-          <a href="reservas.php" class="btn ghost small">Ver reservas</a>
-        </div>
-      </div>
-
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Atividade recente</h3>
-        <?php if (!$atividade): ?>
-          <p class="text-muted" style="font-size:13px;">Ainda não há movimentação registrada.</p>
-        <?php else: foreach ($atividade as $item): ?>
-          <div class="attention-item">
-            <span>
-              <strong><?= e($item['livro_titulo']) ?></strong><br>
-              <span class="text-muted" style="font-size:12px;"><?= e($item['leitor_nome']) ?></span>
-            </span>
-            <span style="text-align:right;">
-              <?php if ($item['tipo'] === 'emprestimo'): ?>
-                <span class="badge muted">Emprestado</span>
-              <?php else: ?>
-                <span class="badge ok">Devolvido</span>
-              <?php endif; ?>
-              <br><span class="mono text-muted" style="font-size:11px;"><?= date('d/m/Y', strtotime($item['data'])) ?></span>
-            </span>
-          </div>
-        <?php endforeach; endif; ?>
-      </div>
-    </div>
-
-    <h3 style="margin:26px 0 14px;">Ações rápidas</h3>
+    <div class="secao-titulo">Ações rápidas</div>
     <div class="quick-actions">
       <a class="quick-action" href="livros.php">
         <span class="icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5c2-1 4.6-1 6.5.3v9.7c-1.9-1.3-4.5-1.3-6.5-.3V4.5ZM16.5 4.5c-2-1-4.6-1-6.5.3v9.7c1.9-1.3 4.5-1.3 6.5-.3V4.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
@@ -486,7 +503,7 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
     </div>
 
-    <h3 style="margin:26px 0 14px;">Minha jornada de leitura</h3>
+    <div class="secao-titulo">Minha jornada de leitura</div>
     <div class="stat-grid">
       <div class="stat-card">
         <div class="rotulo">Livros lidos</div>
@@ -508,9 +525,9 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
     </div>
 
-    <div class="dash-grid igual">
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">O que eu mais leio</h3>
+    <div class="dash-row">
+      <div class="panel span-4">
+        <h3>O que eu mais leio</h3>
         <?php if (!$minhasCategorias): ?>
           <p class="text-muted" style="font-size:13px;">Você ainda não pegou nenhum livro emprestado.</p>
         <?php else: foreach ($minhasCategorias as $cat): ?>
@@ -520,8 +537,10 @@ require __DIR__ . '/includes/layout_topo.php';
             <div class="qtd"><?= (int) $cat['qtd'] ?></div>
           </div>
         <?php endforeach; endif; ?>
+      </div>
 
-        <h3 style="margin:24px 0 16px;">Lidos recentemente</h3>
+      <div class="panel span-4">
+        <h3>Lidos recentemente</h3>
         <?php if (!$meuHistorico): ?>
           <p class="text-muted" style="font-size:13px;">Os livros que você devolver aparecem aqui.</p>
         <?php else: foreach ($meuHistorico as $item): ?>
@@ -535,8 +554,8 @@ require __DIR__ . '/includes/layout_topo.php';
         <?php endforeach; endif; ?>
       </div>
 
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Sugestões para você</h3>
+      <div class="panel span-4">
+        <h3>Sugestões para você</h3>
         <p class="sub">
           <?= $categoriaSugerida
               ? 'Títulos disponíveis de ' . e($categoriaSugerida['nome']) . ', a categoria que você mais lê, que você ainda não pegou.'
@@ -553,7 +572,7 @@ require __DIR__ . '/includes/layout_topo.php';
             <span class="badge ok">Disponível</span>
           </div>
         <?php endforeach; endif; ?>
-        <div style="margin-top:16px;">
+        <div class="panel-rodape">
           <a href="livros.php" class="btn ghost small">Explorar o acervo</a>
         </div>
       </div>

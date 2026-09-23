@@ -331,94 +331,87 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
     </div>
 
-    <div class="panel">
-      <h3 style="margin-bottom:16px;">Movimentação mês a mês</h3>
-      <?php if ($emprestimosPeriodo === 0 && $devolucoesPeriodo === 0): ?>
-        <p class="text-muted" style="font-size:13px;">Nenhuma movimentação registrada neste período.</p>
-      <?php else: ?>
-        <?= graficoMovimento($meses) ?>
-      <?php endif; ?>
-    </div>
+    <!-- ===== Circulação ===== -->
+    <div class="secao-titulo">Circulação</div>
+    <div class="dash-row">
+      <div class="panel span-8">
+        <h3>Movimentação mês a mês</h3>
+        <?php if ($emprestimosPeriodo === 0 && $devolucoesPeriodo === 0): ?>
+          <p class="vazio">Nenhuma movimentação registrada neste período.</p>
+        <?php else: ?>
+          <?= graficoMovimento($meses) ?>
+        <?php endif; ?>
+      </div>
 
-    <div class="dash-grid igual">
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Empréstimos por dia da semana</h3>
+      <div class="panel span-4">
+        <h3>Empréstimos por dia da semana</h3>
         <p class="sub">Ajuda a planejar os horários de maior movimento no balcão.</p>
         <?php if ($emprestimosPeriodo === 0): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum empréstimo registrado neste período.</p>
+          <p class="vazio">Nenhum empréstimo registrado neste período.</p>
         <?php else: foreach ($DIAS_SEMANA as $num => $nomeDia): ?>
           <div class="bar-row">
-            <div class="rotulo"><?= $nomeDia ?></div>
+            <div class="rotulo" style="width:70px;"><?= $nomeDia ?></div>
             <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($porDiaSemana[$num] / $maiorDiaSemana) * 100) ?>%;"></div></div>
             <div class="qtd"><?= $porDiaSemana[$num] ?></div>
           </div>
         <?php endforeach; endif; ?>
       </div>
+    </div>
 
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Reservas no período</h3>
-        <p class="sub">Pedidos feitos entre as datas escolhidas, pela situação atual.</p>
-        <?php if ($totalReservasPeriodo === 0): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhuma reserva feita neste período.</p>
-        <?php else: ?>
-          <div class="stack" role="img" aria-label="<?= e("Atendidas: {$reservasPeriodo['atendida']}, pendentes: {$reservasPeriodo['pendente']}, canceladas: {$reservasPeriodo['cancelada']}") ?>">
-            <?php foreach (['atendida' => 'var(--ok)', 'pendente' => 'var(--aviso)', 'cancelada' => 'var(--texto-secundario)'] as $st => $cor): if ($reservasPeriodo[$st] > 0): ?>
-              <div style="width: <?= round(($reservasPeriodo[$st] / $totalReservasPeriodo) * 100, 1) ?>%; background: <?= $cor ?>;"></div>
-            <?php endif; endforeach; ?>
+    <!-- ===== O que foi lido ===== -->
+    <div class="secao-titulo">O que foi lido</div>
+    <div class="dash-row">
+      <div class="panel span-4">
+        <h3>Livros mais emprestados</h3>
+        <p class="sub">Top 5 do período<?= count($maisEmprestados) > 5 ? ' (de ' . count($maisEmprestados) . ' títulos emprestados)' : '' ?>.</p>
+        <?php if (!$topEmprestados): ?>
+          <p class="vazio">Nenhum empréstimo registrado neste período.</p>
+        <?php else: foreach (array_slice($topEmprestados, 0, 5) as $i => $livro): ?>
+          <div class="attention-item">
+            <span title="<?= e($livro['titulo']) ?> — <?= e($livro['autor']) ?>">
+              <strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($livro['titulo']) ?><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($livro['autor']) ?></span>
+            </span>
+            <span class="mono text-muted"><?= (int) $livro['qtd'] ?>x</span>
           </div>
-          <div class="stack-legenda">
-            <div><span><i style="background:var(--ok)"></i>Atendidas</span><strong><?= $reservasPeriodo['atendida'] ?></strong></div>
-            <div><span><i style="background:var(--aviso)"></i>Pendentes</span><strong><?= $reservasPeriodo['pendente'] ?></strong></div>
-            <div><span><i style="background:var(--texto-secundario)"></i>Canceladas</span><strong><?= $reservasPeriodo['cancelada'] ?></strong></div>
-          </div>
-        <?php endif; ?>
+        <?php endforeach; endif; ?>
+      </div>
 
-        <h3 style="margin:24px 0 16px;">Autores mais lidos</h3>
+      <div class="panel span-4">
+        <h3>Autores mais lidos</h3>
+        <p class="sub">Empréstimos no período, somando todos os títulos do autor.</p>
         <?php if (!$autoresLidos): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum empréstimo registrado neste período.</p>
+          <p class="vazio">Nenhum empréstimo registrado neste período.</p>
         <?php else: foreach ($autoresLidos as $autor): ?>
           <div class="bar-row">
-            <div class="rotulo" title="<?= e($autor['autor']) ?> · <?= (int) $autor['titulos'] ?> título(s)"><?= e($autor['autor']) ?></div>
+            <div class="rotulo" style="width:120px;" title="<?= e($autor['autor']) ?> · <?= (int) $autor['titulos'] ?> título(s)"><?= e($autor['autor']) ?></div>
             <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($autor['qtd'] / $maiorAutor) * 100) ?>%;"></div></div>
             <div class="qtd"><?= (int) $autor['qtd'] ?></div>
           </div>
         <?php endforeach; endif; ?>
       </div>
-    </div>
 
-    <div class="dash-grid">
-      <div class="panel">
-        <h3 style="margin-bottom:6px;">Livros mais emprestados</h3>
-        <p class="text-muted" style="font-size:12.5px;margin:0 0 16px;">
-          Top 10 do período<?= count($maisEmprestados) > 10 ? ' (de ' . count($maisEmprestados) . ' títulos emprestados)' : '' ?>.
-        </p>
-        <?php if (!$topEmprestados): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum empréstimo registrado neste período.</p>
-        <?php else: foreach ($topEmprestados as $i => $livro): ?>
-          <div class="bar-row">
-            <div class="rotulo" title="<?= e($livro['titulo']) ?> — <?= e($livro['autor']) ?>">
-              <strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($livro['titulo']) ?>
-            </div>
-            <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($livro['qtd'] / $maiorEmprestado) * 100) ?>%;"></div></div>
-            <div class="qtd"><?= (int) $livro['qtd'] ?></div>
-          </div>
-        <?php endforeach; endif; ?>
-      </div>
-
-      <div class="panel">
-        <h3 style="margin-bottom:16px;">Empréstimos por categoria</h3>
+      <div class="panel span-4">
+        <h3>Empréstimos por categoria</h3>
+        <p class="sub">Quais áreas do acervo mais circularam no período.</p>
         <?php foreach ($porCategoria as $cat): ?>
           <div class="bar-row">
-            <div class="rotulo"><?= e($cat['nome']) ?></div>
+            <div class="rotulo" style="width:120px;"><?= e($cat['nome']) ?></div>
             <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maiorCategoria) * 100) ?>%;"></div></div>
             <div class="qtd"><?= (int) $cat['qtd'] ?></div>
           </div>
         <?php endforeach; ?>
+      </div>
+    </div>
 
-        <h3 style="margin:22px 0 16px;">Leitores mais ativos</h3>
+    <!-- ===== Leitores, reservas e acervo parado ===== -->
+    <div class="secao-titulo">Leitores e acervo</div>
+    <div class="dash-row">
+      <div class="panel span-4">
+        <h3>Leitores mais ativos</h3>
         <?php if (!$topLeitores): ?>
-          <p class="text-muted" style="font-size:13px;">Nenhum leitor pegou livros emprestados neste período.</p>
-        <?php else: foreach ($topLeitores as $i => $leitor): ?>
+          <p class="vazio">Nenhum leitor pegou livros emprestados neste período.</p>
+        <?php else: foreach (array_slice($topLeitores, 0, 5) as $i => $leitor): ?>
           <div class="attention-item">
             <span>
               <strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($leitor['nome']) ?><br>
@@ -428,27 +421,45 @@ require __DIR__ . '/includes/layout_topo.php';
           </div>
         <?php endforeach; endif; ?>
       </div>
-    </div>
 
-    <div class="panel">
-      <h3 style="margin-bottom:16px;">Livros sem empréstimo no período</h3>
-      <p class="sub">
-        <?= count($livrosParados) ?> de <?= $totalLivros ?> títulos não saíram nenhuma vez entre as datas escolhidas —
-        bons candidatos para divulgação ou revisão do acervo.
-      </p>
-      <?php if (!$livrosParados): ?>
-        <p class="text-muted" style="font-size:13px;margin:0;">Todos os títulos do acervo foram emprestados ao menos uma vez neste período.</p>
-      <?php else: foreach (array_slice($livrosParados, 0, 10) as $livro): ?>
-        <div class="attention-item">
-          <span>
-            <a href="livros.php?ver=<?= (int) $livro['id'] ?>"><strong><?= e($livro['titulo']) ?></strong></a><br>
-            <span class="text-muted" style="font-size:12px;"><?= e($livro['autor']) ?> · <?= e($livro['categoria']) ?></span>
-          </span>
-          <span class="mono text-muted" style="font-size:12px;"><?= (int) $livro['exemplares_total'] ?> ex.</span>
-        </div>
-      <?php endforeach; if (count($livrosParados) > 10): ?>
-        <p class="text-muted" style="font-size:12px;margin:12px 0 0;">E mais <?= count($livrosParados) - 10 ?> título(s).</p>
-      <?php endif; endif; ?>
+      <div class="panel span-4">
+        <h3>Reservas no período</h3>
+        <p class="sub">Pedidos feitos entre as datas escolhidas, pela situação atual.</p>
+        <?php if ($totalReservasPeriodo === 0): ?>
+          <p class="vazio">Nenhuma reserva feita neste período.</p>
+        <?php else: ?>
+          <div class="meter-valor"><?= $totalReservasPeriodo ?> <small>reserva<?= $totalReservasPeriodo === 1 ? '' : 's' ?></small></div>
+          <div class="stack" style="margin-top:12px;" role="img" aria-label="<?= e("Atendidas: {$reservasPeriodo['atendida']}, pendentes: {$reservasPeriodo['pendente']}, canceladas: {$reservasPeriodo['cancelada']}") ?>">
+            <?php foreach (['atendida' => 'var(--ok)', 'pendente' => 'var(--aviso)', 'cancelada' => 'var(--texto-secundario)'] as $st => $cor): if ($reservasPeriodo[$st] > 0): ?>
+              <div style="width: <?= round(($reservasPeriodo[$st] / $totalReservasPeriodo) * 100, 1) ?>%; background: <?= $cor ?>;"></div>
+            <?php endif; endforeach; ?>
+          </div>
+          <?php foreach ([['Atendidas', 'atendida', 'var(--ok)'], ['Pendentes', 'pendente', 'var(--aviso)'], ['Canceladas', 'cancelada', 'var(--texto-secundario)']] as [$nome, $st, $cor]): ?>
+            <div class="attention-item">
+              <span style="display:inline-flex;align-items:center;gap:8px;"><i style="width:10px;height:10px;border-radius:3px;background:<?= $cor ?>;display:inline-block;"></i><?= $nome ?></span>
+              <strong class="mono"><?= $reservasPeriodo[$st] ?></strong>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+
+      <div class="panel span-4">
+        <h3>Livros sem empréstimo</h3>
+        <p class="sub"><?= count($livrosParados) ?> de <?= $totalLivros ?> títulos não saíram no período — bons candidatos para divulgação.</p>
+        <?php if (!$livrosParados): ?>
+          <p class="vazio">Todos os títulos foram emprestados ao menos uma vez neste período.</p>
+        <?php else: foreach (array_slice($livrosParados, 0, 5) as $livro): ?>
+          <div class="attention-item">
+            <span>
+              <a href="livros.php?ver=<?= (int) $livro['id'] ?>"><strong><?= e($livro['titulo']) ?></strong></a><br>
+              <span class="text-muted" style="font-size:12px;"><?= e($livro['autor']) ?> · <?= e($livro['categoria']) ?></span>
+            </span>
+            <span class="mono text-muted" style="font-size:12px;"><?= (int) $livro['exemplares_total'] ?> ex.</span>
+          </div>
+        <?php endforeach; if (count($livrosParados) > 5): ?>
+          <p class="text-muted" style="font-size:12px;margin:12px 0 0;">E mais <?= count($livrosParados) - 5 ?> título(s).</p>
+        <?php endif; endif; ?>
+      </div>
     </div>
 
     <div class="view-head" style="margin-bottom:12px;">
