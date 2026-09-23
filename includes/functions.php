@@ -218,3 +218,24 @@ function atributoTema(): string
     }
     return ' data-theme="' . ($tema === 'escuro' ? 'dark' : 'light') . '"';
 }
+
+/**
+ * Mantém as $limite primeiras linhas (já ordenadas por 'qtd', da maior para
+ * a menor) e soma o resto numa linha "Outras", para gráficos de categoria
+ * não crescerem sem fim conforme o acervo ganha gêneros. A linha "Outras"
+ * leva em 'detalhe' os nomes agrupados, mostrados ao passar o mouse.
+ */
+function agruparOutras(array $linhas, int $limite = 6): array
+{
+    if (count($linhas) <= $limite + 1) {   // só 1 sobrando: mostra ela mesma
+        return $linhas;
+    }
+    $resto = array_slice($linhas, $limite);
+    $principais = array_slice($linhas, 0, $limite);
+    $principais[] = [
+        'nome'    => 'Outras (' . count($resto) . ')',
+        'qtd'     => array_sum(array_map('intval', array_column($resto, 'qtd'))),
+        'detalhe' => implode(', ', array_column($resto, 'nome')),
+    ];
+    return $principais;
+}

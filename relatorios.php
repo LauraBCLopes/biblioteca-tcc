@@ -151,7 +151,9 @@ $porCategoria = consultar($pdo,
                               AND e.data_emprestimo BETWEEN :de AND :ate
       GROUP BY c.id, c.nome
       ORDER BY qtd DESC, c.nome ASC', $intervalo);
-$maiorCategoria = maiorQtd($porCategoria);
+$porCategoria = agruparOutras($porCategoria);
+// escala só pelos gêneros reais: a linha "Outras" não tem barra
+$maiorCategoria = maiorQtd(array_filter($porCategoria, function ($c) { return !isset($c['detalhe']); }));
 
 // ---------- leitores mais ativos no período ----------
 $leitoresAtivos = consultar($pdo,
@@ -396,8 +398,12 @@ require __DIR__ . '/includes/layout_topo.php';
         <p class="sub">Quais áreas do acervo mais circularam no período.</p>
         <?php foreach ($porCategoria as $cat): ?>
           <div class="bar-row">
-            <div class="rotulo" style="width:120px;"><?= e($cat['nome']) ?></div>
-            <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maiorCategoria) * 100) ?>%;"></div></div>
+            <div class="rotulo" style="width:120px;"<?= isset($cat['detalhe']) ? ' title="' . e($cat['detalhe']) . '"' : '' ?>><?= e($cat['nome']) ?></div>
+            <?php if (isset($cat['detalhe'])): ?>
+              <div class="text-muted" style="flex:1;font-size:12px;white-space:nowrap;">demais gêneros</div>
+            <?php else: ?>
+              <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maiorCategoria) * 100) ?>%;"></div></div>
+            <?php endif; ?>
             <div class="qtd"><?= (int) $cat['qtd'] ?></div>
           </div>
         <?php endforeach; ?>

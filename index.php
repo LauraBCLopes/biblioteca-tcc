@@ -58,9 +58,11 @@ if (isAdmin()) {
          FROM categorias c
          LEFT JOIN livros l ON l.categoria_id = c.id
          GROUP BY c.id
-         ORDER BY qtd DESC"
+         ORDER BY qtd DESC, c.nome ASC"
     )->fetchAll();
-    $maxCategoria = max(1, ...array_column($porCategoria, 'qtd'));
+    $porCategoria = agruparOutras($porCategoria);
+    // escala só pelos gêneros reais: a linha "Outras" não tem barra
+    $maxCategoria = max(array_merge([1], array_map('intval', array_column(array_filter($porCategoria, function ($c) { return !isset($c['detalhe']); }), 'qtd'))));
 
     // --- top 5 livros mais emprestados ---
     $maisEmprestados = $pdo->query(
@@ -363,7 +365,11 @@ require __DIR__ . '/includes/layout_topo.php';
     <div class="dash-row">
       <div class="panel span-8">
         <h3>Movimentação dos últimos 6 meses</h3>
-        <?= graficoMovimento($mesesPainel) ?>
+        <?php if (array_sum(array_map('array_sum', $mesesPainel)) === 0): ?>
+          <p class="vazio">Nenhum empréstimo ou devolução nos últimos 6 meses.</p>
+        <?php else: ?>
+          <?= graficoMovimento($mesesPainel) ?>
+        <?php endif; ?>
       </div>
 
       <div class="panel span-4">
@@ -411,8 +417,12 @@ require __DIR__ . '/includes/layout_topo.php';
         <h3>Títulos por categoria</h3>
         <?php foreach ($porCategoria as $cat): ?>
           <div class="bar-row">
-            <div class="rotulo"><?= e($cat['nome']) ?></div>
-            <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maxCategoria) * 100) ?>%;"></div></div>
+            <div class="rotulo"<?= isset($cat['detalhe']) ? ' title="' . e($cat['detalhe']) . '"' : '' ?>><?= e($cat['nome']) ?></div>
+            <?php if (isset($cat['detalhe'])): ?>
+              <div class="text-muted" style="flex:1;font-size:12px;white-space:nowrap;">demais gêneros</div>
+            <?php else: ?>
+              <div class="bar-track"><div class="bar-fill" style="width: <?= (int) round(($cat['qtd'] / $maxCategoria) * 100) ?>%;"></div></div>
+            <?php endif; ?>
             <div class="qtd"><?= (int) $cat['qtd'] ?></div>
           </div>
         <?php endforeach; ?>
