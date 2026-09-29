@@ -18,31 +18,16 @@ if (isLoggedIn()) {
 </head>
 <body>
   <div class="auth-page">
-    <div class="auth-side">
-      <div class="brand-row">
-        <?= bibliotechLogo(38) ?>
+    <div class="auth-center">
+      <div class="auth-brand">
+        <?= bibliotechLogo(58) ?>
         <div>
           <div class="brand-name">Bibliotech</div>
           <div class="brand-tag">Estante Digital</div>
         </div>
       </div>
-      <div class="illustration">
-        <svg width="220" height="140" viewBox="0 0 220 140" fill="none">
-          <rect x="20" y="80" width="180" height="14" rx="4" fill="rgba(255,255,255,0.25)"/>
-          <rect x="35" y="35" width="34" height="52" rx="3" fill="rgba(255,255,255,0.85)"/>
-          <rect x="75" y="20" width="34" height="67" rx="3" fill="rgba(255,255,255,0.6)"/>
-          <rect x="115" y="45" width="34" height="42" rx="3" fill="rgba(255,255,255,0.85)"/>
-          <rect x="155" y="28" width="34" height="59" rx="3" fill="rgba(255,255,255,0.6)"/>
-        </svg>
-      </div>
-      <h2>Conhecimento sempre ao seu alcance.</h2>
-      <p class="sub">Sem acesso à conta? A biblioteca te ajuda a recuperar em poucos passos.</p>
-    </div>
 
-    <div class="auth-form-wrap">
       <div class="login-card" style="max-width:440px;">
-        <div class="brand-row-mobile"><?= bibliotechLogo(30) ?> <strong>Bibliotech</strong></div>
-        <div class="eyebrow">Estante Digital</div>
         <h1>Esqueceu sua senha?</h1>
 
         <div class="panel" style="box-shadow:none;border:1px solid var(--linha);padding:16px 18px;margin-bottom:16px;">
@@ -68,6 +53,11 @@ if (isLoggedIn()) {
           <a href="login.php">Voltar para o login</a>
         </div>
       </div>
+    </div>
+
+    <div class="auth-frase">
+      <h2>Conhecimento sempre ao seu alcance.</h2>
+      <span class="traco" aria-hidden="true"></span>
     </div>
   </div>
 </body>
