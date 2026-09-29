@@ -195,14 +195,14 @@ function graficoMovimento(array $meses): string
 const TEMAS = ['claro' => 'Claro', 'escuro' => 'Escuro', 'sistema' => 'Automático'];
 
 /**
- * Tema escolhido pela pessoa neste navegador (cookie "tema").
- * Fica em cookie, e não no banco, para valer também nas telas de login
- * (antes de saber quem é o usuário) e para não exigir migração.
+ * Tema escolhido pela pessoa neste navegador (cookie "tema"); sem escolha,
+ * abre no escuro. Fica em cookie, e não no banco, para valer também nas
+ * telas de login (antes de saber quem é o usuário) e para não exigir migração.
  */
 function temaAtual(): string
 {
-    $tema = $_COOKIE['tema'] ?? 'sistema';
-    return isset(TEMAS[$tema]) ? $tema : 'sistema';
+    $tema = $_COOKIE['tema'] ?? 'escuro';
+    return isset(TEMAS[$tema]) ? $tema : 'escuro';
 }
 
 /**
