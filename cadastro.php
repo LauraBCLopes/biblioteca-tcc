@@ -99,11 +99,8 @@ unset($_SESSION['cadastro_valores']);
   <div class="auth-page">
     <div class="auth-center">
       <div class="auth-brand">
-        <?= bibliotechLogo(58) ?>
-        <div>
-          <div class="brand-name">Bibliotech</div>
-          <div class="brand-tag">Estante Digital</div>
-        </div>
+        <div class="brand-name">Bibliotech</div>
+        <div class="brand-tag">Estante Digital</div>
       </div>
 
       <div class="login-card" style="max-width:440px;">
