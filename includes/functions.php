@@ -36,21 +36,31 @@ function e(?string $valor): string
 }
 
 /**
- * SVG inline do logo Bibliotech (livro aberto, gradiente roxo → azul).
+ * SVG inline do logo Bibliotech (livro fechado com marcador e etiqueta,
+ * em traço branco sobre o gradiente roxo → azul do sistema).
  * Inline (não é um arquivo de imagem) para funcionar igual local e na Vercel,
  * e para poder herdar as cores do tema via gradiente definido no próprio SVG.
  */
 function bibliotechLogo(int $tamanho = 34): string
 {
     $id = 'lg' . $tamanho;
+    // Em tamanho pequeno (menu lateral) os detalhes finos viram borrão:
+    // some a linha de página do topo e as linhas de dentro da etiqueta.
+    $detalhado = $tamanho >= 44;
+    $paginaTopo = $detalhado ? 'M15.2 9h14.3' : '';
+    $linhasEtiqueta = $detalhado ? '<path d="M19.6 21.6h5M19.6 23.5h5"/>' : '';
     return '<svg width="' . $tamanho . '" height="' . $tamanho . '" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="40" y2="40">
+        <defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
           <stop offset="0" stop-color="#6C63E8"/><stop offset="1" stop-color="#3F7FE8"/>
         </linearGradient></defs>
         <rect width="40" height="40" rx="10" fill="url(#' . $id . ')"/>
-        <path d="M20 13c-2.4-1.6-6-2-9-1.2v14.4c3-.8 6.6-.4 9 1.2 2.4-1.6 6-2 9-1.2V11.8c-3-.8-6.6-.4-9 1.2Z"
-              fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-        <path d="M20 13v14.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+        <g stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="10.5" y="7" width="19" height="26" rx="2.6"/>
+          <path d="M10.5 9.2A1.8 1.8 0 0 0 12.3 11H22.6M26.4 11h3.1' . $paginaTopo . 'M15.2 11v22"/>
+          <path d="M22.6 11v5.6l1.9-1.6 1.9 1.6V11"/>
+          <rect x="17.6" y="19.4" width="9" height="6.2" rx="1.2"/>
+          ' . $linhasEtiqueta . '
+        </g>
       </svg>';
 }
 
