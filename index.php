@@ -64,13 +64,13 @@ if (isAdmin()) {
     // escala só pelos gêneros reais: a linha "Outras" não tem barra
     $maxCategoria = max(array_merge([1], array_map('intval', array_column(array_filter($porCategoria, function ($c) { return !isset($c['detalhe']); }), 'qtd'))));
 
-    // --- top 5 livros mais emprestados ---
+    // --- top 5 livros mais emprestados (com autor e capa para o ranking) ---
     $maisEmprestados = $pdo->query(
-        "SELECT l.titulo, COUNT(*) AS qtd
+        "SELECT l.id, l.titulo, l.autor, l.capa_url, COUNT(*) AS qtd
          FROM emprestimos e
          JOIN livros l ON l.id = e.livro_id
-         GROUP BY l.id
-         ORDER BY qtd DESC
+         GROUP BY l.id, l.titulo, l.autor, l.capa_url
+         ORDER BY qtd DESC, l.titulo ASC
          LIMIT 5"
     )->fetchAll();
 
@@ -97,6 +97,17 @@ if (isAdmin()) {
          WHERE r.status = 'pendente'
          GROUP BY l.id, l.titulo, l.exemplares_disponiveis, l.exemplares_total
          ORDER BY fila DESC, l.titulo ASC
+         LIMIT 5"
+    )->fetchAll();
+
+    // --- empréstimos recentes (tabela do topo do painel) ---
+    $emprestimosRecentes = $pdo->query(
+        "SELECT e.id, e.data_emprestimo, e.data_prevista, e.data_devolucao, e.status,
+                l.titulo AS livro_titulo, r.nome AS leitor_nome
+         FROM emprestimos e
+         JOIN livros l   ON l.id = e.livro_id
+         JOIN leitores r ON r.id = e.leitor_id
+         ORDER BY e.data_emprestimo DESC, e.id DESC
          LIMIT 5"
     )->fetchAll();
 
@@ -243,49 +254,143 @@ $paginaAtual = 'painel';
 require __DIR__ . '/includes/layout_topo.php';
 ?>
 
-    <div class="view-head">
-      <div>
-        <div class="eyebrow">Painel</div>
-        <h2>Bem-vindo(a), <?= e($admin['nome']) ?></h2>
-        <p class="text-muted" style="margin-top:6px;font-size:13.5px;">Gerencie o acervo, os empréstimos e mantenha o conhecimento sempre em movimento.</p>
+    <?php
+    $primeiroNome = explode(' ', trim($admin['nome']))[0];
+    // Ícones dos cards de indicadores (traço, 20x20, herdam a cor do card)
+    $icones = [
+        'livro'    => '<path d="M4.5 3.5h9a2 2 0 0 1 2 2v11h-11a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z"/><path d="M6.5 3.5v13M15.5 13.5h-11"/>',
+        'pessoas'  => '<circle cx="7.5" cy="7" r="2.6"/><path d="M2.8 16c.5-2.8 2.4-4.2 4.7-4.2s4.2 1.4 4.7 4.2"/><circle cx="14" cy="7.8" r="2"/><path d="M13.4 11.8c2 .1 3.4 1.3 3.8 3.6"/>',
+        'troca'    => '<path d="M4 7h11.5l-3-3M16 13H4.5l3 3"/>',
+        'relogio'  => '<circle cx="10" cy="10" r="6.8"/><path d="M10 6.4V10l2.6 1.6"/>',
+        'agenda'   => '<rect x="3.5" y="4.5" width="13" height="12" rx="2"/><path d="M3.5 8.2h13M7 3v3M13 3v3"/>',
+        'fila'     => '<path d="M5 5h10M5 10h10M5 15h6"/>',
+        'renovar'  => '<path d="M15.5 8A6 6 0 0 0 4.7 6.5M4.5 12a6 6 0 0 0 10.8 1.5"/><path d="M4.5 3.5v3h3M15.5 16.5v-3h-3"/>',
+        'bloqueio' => '<circle cx="10" cy="10" r="6.8"/><path d="M5.2 14.8l9.6-9.6"/>',
+    ];
+    $icone = function (string $nome) use ($icones): string {
+        return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' . $icones[$nome] . '</svg>';
+    };
+    ?>
+
+    <section class="hero">
+      <div class="hero-texto">
+        <div class="hero-data mono">Hoje · <?= date('d/m/Y') ?></div>
+        <h2>Bem-vindo(a), <?= e($primeiroNome) ?>!</h2>
+        <p><?= isAdmin()
+              ? 'Gerencie o acervo, os empréstimos e mantenha o conhecimento sempre em movimento.'
+              : 'Acompanhe seus empréstimos e reservas e descubra sua próxima leitura.' ?></p>
       </div>
-      <div class="mono text-muted" style="font-size:12.5px;">Hoje · <?= date('d/m/Y') ?></div>
-    </div>
+<svg class="hero-arte" viewBox="0 0 230 130" fill="none" aria-hidden="true">
+        <rect x="20" y="104" width="190" height="22" rx="4" fill="#3F7FE8"/>
+        <rect x="54" y="108" width="150" height="14" rx="2" fill="#fff"/>
+        <path d="M58 113h142M58 117h142" stroke="#3F7FE8" stroke-opacity=".35"/>
+        <rect x="28" y="109" width="3" height="12" rx="1.5" fill="#fff" fill-opacity=".55"/>
+        <rect x="30" y="80" width="176" height="22" rx="4" fill="#6C63E8"/>
+        <rect x="64" y="84" width="136" height="14" rx="2" fill="#fff"/>
+        <path d="M68 89h128M68 93h128" stroke="#6C63E8" stroke-opacity=".35"/>
+        <rect x="38" y="85" width="3" height="12" rx="1.5" fill="#fff" fill-opacity=".55"/>
+        <rect x="12" y="56" width="186" height="22" rx="4" fill="#4F6FE6"/>
+        <rect x="46" y="60" width="146" height="14" rx="2" fill="#fff"/>
+        <path d="M50 65h138M50 69h138" stroke="#4F6FE6" stroke-opacity=".35"/>
+        <rect x="20" y="61" width="3" height="12" rx="1.5" fill="#fff" fill-opacity=".55"/>
+        <rect x="34" y="32" width="166" height="22" rx="4" fill="#8B7CF6"/>
+        <rect x="68" y="36" width="126" height="14" rx="2" fill="#fff"/>
+        <path d="M72 41h118M72 45h118" stroke="#8B7CF6" stroke-opacity=".35"/>
+        <rect x="42" y="37" width="3" height="12" rx="1.5" fill="#fff" fill-opacity=".55"/>
+        <rect x="22" y="8" width="178" height="22" rx="4" fill="#5B5FE0"/>
+        <rect x="56" y="12" width="138" height="14" rx="2" fill="#fff"/>
+        <path d="M60 17h130M60 21h130" stroke="#5B5FE0" stroke-opacity=".35"/>
+        <rect x="30" y="13" width="3" height="12" rx="1.5" fill="#fff" fill-opacity=".55"/>
+      </svg>
+      <div class="hero-frase">
+        Ler é construir novos amanhãs.
+        <span class="traco" aria-hidden="true"></span>
+      </div>
+    </section>
 
     <?php if (isAdmin()): ?>
 
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="rotulo">Títulos no acervo</div>
-        <div class="valor"><?= $totalLivros ?></div>
+    <div class="kpi-grid">
+      <?php foreach ([
+          ['Títulos no acervo',          $totalLivros,          'livro',    'roxo'],
+          ['Leitores cadastrados',       $totalLeitores,        'pessoas',  'azul'],
+          ['Empréstimos em circulação',  $emprestimosAtivos,    'troca',    'roxo'],
+          ['Atrasados',                  $emprestimosAtrasados, 'relogio',  $emprestimosAtrasados > 0 ? 'alerta' : 'ok'],
+          ['Vencendo em até 3 dias',     $vencendoEmBreve,      'agenda',   $vencendoEmBreve > 0 ? 'aviso' : 'azul'],
+          ['Reservas pendentes',         $reservasPendentes,    'fila',     'azul'],
+          ['Renovações aguardando',      $renovacoesPendentes,  'renovar',  $renovacoesPendentes > 0 ? 'aviso' : 'roxo'],
+          ['Leitores bloqueados',        $leitoresBloqueados,   'bloqueio', $leitoresBloqueados > 0 ? 'alerta' : 'azul'],
+      ] as [$rotulo, $valor, $nomeIcone, $cor]): ?>
+        <div class="kpi-card <?= $cor ?>">
+          <span class="kpi-icone"><?= $icone($nomeIcone) ?></span>
+          <div>
+            <div class="rotulo"><?= $rotulo ?></div>
+            <div class="valor"><?= (int) $valor ?></div>
+          </div>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="dash-row">
+      <div class="panel span-8">
+        <div class="panel-head">
+          <h3>Empréstimos recentes</h3>
+          <a href="emprestimos.php">Ver todos</a>
+        </div>
+        <?php if (!$emprestimosRecentes): ?>
+          <p class="vazio">Ainda não há empréstimos registrados.</p>
+        <?php else: ?>
+          <div class="tabela-painel">
+            <table>
+              <thead>
+                <tr><th>Leitor</th><th>Livro</th><th>Empréstimo</th><th>Devolução</th><th>Situação</th></tr>
+              </thead>
+              <tbody>
+                <?php foreach ($emprestimosRecentes as $item): ?>
+                  <tr>
+                    <td><?= e($item['leitor_nome']) ?></td>
+                    <td><?= e($item['livro_titulo']) ?></td>
+                    <td class="mono"><?= date('d/m/Y', strtotime($item['data_emprestimo'])) ?></td>
+                    <td class="mono"><?= date('d/m/Y', strtotime($item['data_devolucao'] ?: $item['data_prevista'])) ?></td>
+                    <td>
+                      <?php if ($item['status'] === 'atrasado'): ?>
+                        <span class="badge alert">Atrasado</span>
+                      <?php elseif ($item['status'] === 'devolvido'): ?>
+                        <span class="badge ok">Devolvido</span>
+                      <?php else: ?>
+                        <span class="badge azul">Em andamento</span>
+                      <?php endif; ?>
+                    </td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
       </div>
-      <div class="stat-card">
-        <div class="rotulo">Leitores cadastrados</div>
-        <div class="valor"><?= $totalLeitores ?></div>
-      </div>
-      <div class="stat-card">
-        <div class="rotulo">Empréstimos em circulação</div>
-        <div class="valor"><?= $emprestimosAtivos ?></div>
-      </div>
-      <div class="stat-card <?= $emprestimosAtrasados > 0 ? 'alert' : 'ok' ?>">
-        <div class="rotulo">Atrasados</div>
-        <div class="valor"><?= $emprestimosAtrasados ?></div>
-      </div>
-      <div class="stat-card <?= $vencendoEmBreve > 0 ? 'warn' : '' ?>">
-        <div class="rotulo">Vencendo em até 3 dias</div>
-        <div class="valor"><?= $vencendoEmBreve ?></div>
-      </div>
-      <div class="stat-card">
-        <div class="rotulo">Reservas pendentes</div>
-        <div class="valor"><?= $reservasPendentes ?></div>
-      </div>
-      <div class="stat-card <?= $renovacoesPendentes > 0 ? 'warn' : '' ?>">
-        <div class="rotulo">Renovações aguardando</div>
-        <div class="valor"><?= $renovacoesPendentes ?></div>
-      </div>
-      <div class="stat-card <?= $leitoresBloqueados > 0 ? 'alert' : '' ?>">
-        <div class="rotulo">Leitores bloqueados</div>
-        <div class="valor"><?= $leitoresBloqueados ?></div>
+
+      <div class="panel span-4">
+        <div class="panel-head">
+          <h3>Livros mais emprestados</h3>
+          <a href="relatorios.php">Ver todos</a>
+        </div>
+        <?php if (!$maisEmprestados): ?>
+          <p class="vazio">Ainda não há empréstimos registrados.</p>
+        <?php else: foreach ($maisEmprestados as $i => $item): ?>
+          <a class="rank-item" href="livros.php?ver=<?= (int) $item['id'] ?>">
+            <span class="rank-pos"><?= $i + 1 ?></span>
+            <?php if ($item['capa_url']): ?>
+              <img class="rank-capa" src="<?= e($item['capa_url']) ?>" alt="">
+            <?php else: ?>
+              <span class="rank-capa sem-capa" aria-hidden="true"><?= $icone('livro') ?></span>
+            <?php endif; ?>
+            <span class="rank-texto">
+              <strong><?= e($item['titulo']) ?></strong>
+              <small><?= e($item['autor']) ?></small>
+            </span>
+            <span class="rank-qtd"><?= (int) $item['qtd'] ?> <?= (int) $item['qtd'] === 1 ? 'empréstimo' : 'empréstimos' ?></span>
+          </a>
+        <?php endforeach; endif; ?>
       </div>
     </div>
 
@@ -413,7 +518,7 @@ require __DIR__ . '/includes/layout_topo.php';
         </div>
       </div>
 
-      <div class="panel span-4">
+      <div class="panel span-8">
         <h3>Títulos por categoria</h3>
         <?php foreach ($porCategoria as $cat): ?>
           <div class="bar-row">
@@ -430,41 +535,24 @@ require __DIR__ . '/includes/layout_topo.php';
           <a href="livros.php" class="btn ghost small">Ver acervo</a>
         </div>
       </div>
-
-      <div class="panel span-4">
-        <h3>Mais emprestados</h3>
-        <?php if (!$maisEmprestados): ?>
-          <p class="vazio">Ainda não há empréstimos registrados.</p>
-        <?php else: foreach ($maisEmprestados as $i => $item): ?>
-          <div class="attention-item">
-            <span><strong class="mono" style="color:var(--roxo);">#<?= $i + 1 ?></strong> <?= e($item['titulo']) ?></span>
-            <span class="mono text-muted"><?= (int) $item['qtd'] ?>x</span>
-          </div>
-        <?php endforeach; endif; ?>
-        <div class="panel-rodape">
-          <a href="relatorios.php" class="btn ghost small">Ver relatórios</a>
-        </div>
-      </div>
     </div>
 
     <div class="secao-titulo">Ações rápidas</div>
     <div class="quick-actions">
-      <a class="quick-action" href="livros.php">
-        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5c2-1 4.6-1 6.5.3v9.7c-1.9-1.3-4.5-1.3-6.5-.3V4.5ZM16.5 4.5c-2-1-4.6-1-6.5.3v9.7c1.9-1.3 4.5-1.3 6.5-.3V4.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
-        Cadastrar novo livro
-      </a>
-      <a class="quick-action" href="leitores.php">
-        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="6.5" r="2.6" stroke="currentColor" stroke-width="1.6"/><path d="M4 16c.6-3 3-4.5 6-4.5s5.4 1.5 6 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-        Cadastrar usuário
-      </a>
-      <a class="quick-action" href="emprestimos.php">
-        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="5" width="13" height="10.5" rx="1.6" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 8.2h13M7 5V3.6M13 5V3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
-        Registrar empréstimo
-      </a>
-      <a class="quick-action" href="relatorios.php">
-        <span class="icon"><svg viewBox="0 0 20 20" fill="none"><path d="M4 16V8.5M9 16V4M14 16v-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span>
-        Ver relatórios
-      </a>
+      <?php
+      $seta = '<svg class="qa-seta" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 5l5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      foreach ([
+          ['livros.php',      'livro',   'Cadastrar novo livro',  'Adicione um título ao acervo'],
+          ['leitores.php',    'pessoas', 'Cadastrar usuário',     'Registre um novo leitor'],
+          ['emprestimos.php', 'troca',   'Registrar empréstimo',  'Realize um novo empréstimo'],
+          ['relatorios.php',  'agenda',  'Ver relatórios',        'Acesse as estatísticas'],
+      ] as [$link, $nomeIcone, $titulo, $descricao]): ?>
+        <a class="quick-action" href="<?= $link ?>">
+          <span class="icon"><?= $icone($nomeIcone) ?></span>
+          <span class="qa-texto"><strong><?= $titulo ?></strong><small><?= $descricao ?></small></span>
+          <?= $seta ?>
+        </a>
+      <?php endforeach; ?>
     </div>
 
     <?php else: ?>
