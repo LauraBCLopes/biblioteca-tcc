@@ -491,7 +491,7 @@ require __DIR__ . '/includes/layout_topo.php';
     <div class="panel">
       <h3 style="margin-bottom:16px;">Seus empréstimos que pedem atenção</h3>
       <?php if (!$minhaListaAtencao): ?>
-        <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo seu está atrasado ou vencendo nos próximos dias. 🎉</p>
+        <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo seu está atrasado ou vencendo nos próximos dias.</p>
       <?php else: foreach ($minhaListaAtencao as $item): ?>
         <div class="attention-item">
           <strong><?= e($item['livro_titulo']) ?></strong>

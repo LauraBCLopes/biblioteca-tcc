@@ -106,7 +106,7 @@ function navIcone(string $slug): string
           <div class="dropdown">
             <div class="dropdown-title">Notificações</div>
             <?php if ($navTotalAvisos === 0): ?>
-              <div class="dropdown-empty">Nenhuma notificação por aqui. 🎉</div>
+              <div class="dropdown-empty">Nenhuma notificação por aqui.</div>
             <?php else: ?>
               <?php if ($navAtrasados > 0): ?>
                 <a class="dropdown-item" href="emprestimos.php">
