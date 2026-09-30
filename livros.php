@@ -326,13 +326,12 @@ require __DIR__ . '/includes/layout_topo.php';
         </p>
 
         <div class="book-detail-actions">
-          <?php if (isAdmin()):
-            $confirmMsg = htmlspecialchars(
-                json_encode('Remover "' . $livroDetalhe['titulo'] . '" do acervo?', JSON_UNESCAPED_UNICODE),
-                ENT_QUOTES
-            ); ?>
+          <?php if (isAdmin()): ?>
             <a class="btn primary" href="?editar=<?= (int) $livroDetalhe['id'] ?>">Editar</a>
-            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>" onclick='return confirm(<?= $confirmMsg ?>);'>Excluir</a>
+            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>"
+               data-confirmar="Remover &quot;<?= e($livroDetalhe['titulo']) ?>&quot; do acervo? Essa ação não pode ser desfeita."
+               data-confirmar-titulo="Excluir livro"
+               data-confirmar-botao="Excluir">Excluir</a>
           <?php else: ?>
             <?php if ($emprestimoAtivoDoAluno): ?>
               <button class="btn ghost" type="button" disabled>Você já está com este livro</button>
