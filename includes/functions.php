@@ -1,5 +1,12 @@
 <?php
 /**
+ * Versão do CSS/JS, colocada no fim do endereço (estilo.css?v=...).
+ * Troque este valor sempre que mudar o CSS ou o JS: assim o navegador
+ * (principalmente no celular) baixa o arquivo novo em vez de usar o antigo.
+ */
+const VERSAO_ASSETS = '2026-09-29';
+
+/**
  * Funções auxiliares usadas em várias páginas do sistema.
  */
 

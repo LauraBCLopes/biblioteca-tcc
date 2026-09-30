@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Bibliotech</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/estilo.css">
+<link rel="stylesheet" href="assets/css/estilo.css?v=<?= VERSAO_ASSETS ?>">
 </head>
 <body>
   <div class="auth-page">
@@ -103,6 +103,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <span class="traco" aria-hidden="true"></span>
     </div>
   </div>
-<script src="assets/js/interface.js"></script>
+<script src="assets/js/interface.js?v=<?= VERSAO_ASSETS ?>"></script>
 </body>
 </html>
