@@ -394,7 +394,10 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="book-detail-actions">
           <?php if (isAdmin()): ?>
             <a class="btn primary" href="?editar=<?= (int) $livroDetalhe['id'] ?>">Editar</a>
-            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>">Excluir</a>
+            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>"
+               data-confirmar="Remover &quot;<?= e($livroDetalhe['titulo']) ?>&quot; do acervo? Você poderá desfazer logo em seguida."
+               data-confirmar-titulo="Excluir livro"
+               data-confirmar-botao="Excluir">Excluir</a>
           <?php else: ?>
             <?php if ($emprestimoAtivoDoAluno): ?>
               <button class="btn ghost" type="button" disabled>Você já está com este livro</button>

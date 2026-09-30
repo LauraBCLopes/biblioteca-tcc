@@ -76,6 +76,48 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Confirmação dentro do site (no lugar do confirm() do navegador) para
+  // links com data-confirmar. Só segue o link se a pessoa confirmar.
+  var modal = null;
+  var linkPendente = null;
+
+  function criarModal() {
+    modal = document.createElement('dialog');
+    modal.className = 'confirm-modal';
+    modal.innerHTML =
+      '<h3 class="confirm-titulo"></h3>' +
+      '<p class="confirm-texto"></p>' +
+      '<div class="confirm-acoes">' +
+        '<button type="button" class="btn ghost" data-acao="cancelar">Cancelar</button>' +
+        '<button type="button" class="btn danger" data-acao="confirmar"></button>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    modal.addEventListener('click', function (evento) {
+      var acao = evento.target.dataset.acao;
+      if (acao === 'confirmar' && linkPendente) {
+        window.location.href = linkPendente.href;
+      }
+      // Clique em "Cancelar" ou no fundo escuro fora do cartão fecha o modal.
+      if (acao === 'cancelar' || evento.target === modal) {
+        modal.close();
+      }
+    });
+  }
+
+  document.querySelectorAll('[data-confirmar]').forEach(function (link) {
+    link.addEventListener('click', function (evento) {
+      evento.preventDefault();
+      if (!modal) { criarModal(); }
+      linkPendente = link;
+      modal.querySelector('.confirm-titulo').textContent = link.dataset.confirmarTitulo || 'Confirmar';
+      modal.querySelector('.confirm-texto').textContent = link.dataset.confirmar;
+      modal.querySelector('[data-acao="confirmar"]').textContent = link.dataset.confirmarBotao || 'Confirmar';
+      modal.showModal();
+      modal.querySelector('[data-acao="cancelar"]').focus();
+    });
+  });
+
   // Configurações → Aparência: aplica o tema na hora (sem esperar o servidor)
   // e envia o formulário para o PHP gravar a escolha no cookie.
   var formTema = document.getElementById('form-tema');
