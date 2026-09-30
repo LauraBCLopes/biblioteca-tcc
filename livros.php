@@ -32,6 +32,22 @@ function gerarCodigo(PDO $pdo, int $categoriaId): string
     return $codigo;
 }
 
+// Por quanto tempo depois de excluir ainda dá para desfazer (em segundos).
+const PRAZO_DESFAZER = 600;
+
+/**
+ * Insere de volta uma linha apagada, com o mesmo id de antes.
+ * No Postgres o id é "GENERATED ALWAYS", por isso o OVERRIDING SYSTEM VALUE.
+ */
+function reinserirLinha(PDO $pdo, string $tabela, array $linha): void
+{
+    $colunas = array_keys($linha);
+    $sql = 'INSERT INTO ' . $tabela . ' (' . implode(', ', $colunas) . ')'
+         . (DB_DRIVER === 'pgsql' ? ' OVERRIDING SYSTEM VALUE' : '')
+         . ' VALUES (:' . implode(', :', $colunas) . ')';
+    $pdo->prepare($sql)->execute($linha);
+}
+
 // ---------- salvar (cadastro/edição) — só admin ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     requireAdmin();
@@ -145,15 +161,65 @@ if (!empty($_GET['excluir'])) {
         flash('Este livro possui histórico de empréstimos e não pode ser removido do acervo.', 'erro');
     } else {
         try {
+            // Guarda o livro e o que é apagado junto com ele (reservas e
+            // favoritos, via ON DELETE CASCADE) para o botão "Desfazer".
+            $copia = [];
+            foreach (['livros' => 'id', 'reservas' => 'livro_id', 'favoritos' => 'livro_id'] as $tabela => $coluna) {
+                $stmt = $pdo->prepare("SELECT * FROM $tabela WHERE $coluna = :id");
+                $stmt->execute(['id' => $idExcluir]);
+                $copia[$tabela] = $stmt->fetchAll();
+            }
+
             $stmt = $pdo->prepare('DELETE FROM livros WHERE id = :id');
             $stmt->execute(['id' => $idExcluir]);
-            flash('Livro removido do acervo.');
+
+            if ($copia['livros']) {
+                $_SESSION['livro_excluido'] = ['dados' => $copia, 'em' => time()];
+                flash('"' . $copia['livros'][0]['titulo'] . '" foi removido do acervo.', 'ok',
+                      ['texto' => 'Desfazer', 'url' => 'livros.php?desfazer_exclusao=1']);
+            } else {
+                flash('Livro removido do acervo.');
+            }
         } catch (PDOException $e) {
             flash('Não foi possível remover este livro (ele está referenciado em outro registro).', 'erro');
         }
     }
 
     header('Location: livros.php');
+    exit;
+}
+
+// ---------- desfazer a última exclusão — só admin ----------
+if (!empty($_GET['desfazer_exclusao'])) {
+    requireAdmin();
+
+    $excluido = $_SESSION['livro_excluido'] ?? null;
+    unset($_SESSION['livro_excluido']);
+
+    if (!$excluido || time() - $excluido['em'] > PRAZO_DESFAZER) {
+        flash('Não há exclusão recente para desfazer.', 'erro');
+        header('Location: livros.php');
+        exit;
+    }
+
+    $livro = $excluido['dados']['livros'][0];
+    try {
+        $pdo->beginTransaction();
+        reinserirLinha($pdo, 'livros', $livro);
+        foreach (['reservas', 'favoritos'] as $tabela) {
+            foreach ($excluido['dados'][$tabela] as $linha) {
+                reinserirLinha($pdo, $tabela, $linha);
+            }
+        }
+        $pdo->commit();
+        flash('"' . $livro['titulo'] . '" voltou para o acervo.');
+        header('Location: livros.php?ver=' . (int) $livro['id']);
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        // Ex.: outro livro foi cadastrado com o mesmo código nesse meio-tempo.
+        flash('Não foi possível restaurar "' . $livro['titulo'] . '" (talvez já exista um livro com o mesmo código).', 'erro');
+        header('Location: livros.php');
+    }
     exit;
 }
 
@@ -328,10 +394,7 @@ require __DIR__ . '/includes/layout_topo.php';
         <div class="book-detail-actions">
           <?php if (isAdmin()): ?>
             <a class="btn primary" href="?editar=<?= (int) $livroDetalhe['id'] ?>">Editar</a>
-            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>"
-               data-confirmar="Remover &quot;<?= e($livroDetalhe['titulo']) ?>&quot; do acervo? Essa ação não pode ser desfeita."
-               data-confirmar-titulo="Excluir livro"
-               data-confirmar-botao="Excluir">Excluir</a>
+            <a class="btn danger" href="?excluir=<?= (int) $livroDetalhe['id'] ?>">Excluir</a>
           <?php else: ?>
             <?php if ($emprestimoAtivoDoAluno): ?>
               <button class="btn ghost" type="button" disabled>Você já está com este livro</button>

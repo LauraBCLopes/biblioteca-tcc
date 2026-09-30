@@ -145,5 +145,8 @@ function navIcone(string $slug): string
       <?php if ($flash): ?>
         <div class="alert-box <?= $flash['tipo'] === 'ok' ? 'ok' : '' ?>">
           <?= e($flash['mensagem']) ?>
+          <?php if (!empty($flash['acao'])): ?>
+            <a class="alert-acao" href="<?= e($flash['acao']['url']) ?>"><?= e($flash['acao']['texto']) ?></a>
+          <?php endif; ?>
         </div>
       <?php endif; ?>

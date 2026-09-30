@@ -189,6 +189,8 @@ button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
   padding: 11px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px;
 }
 .alert-box.ok{ background: var(--ok-bg); border-color: rgba(47,158,110,0.25); color: var(--ok); }
+.alert-acao{ margin-left:10px; font-weight:700; color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.alert-acao:hover{ opacity:0.8; }
 .hint{ font-size:12px; color: var(--texto-secundario); margin-top:16px; text-align:center; }
 
 /* ---------- Layout interno (app) ---------- */
@@ -488,18 +490,6 @@ tbody tr:hover{ background: var(--fundo); }
 .book-detail-meta{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 14px; }
 .book-detail-desc{ color: var(--texto); font-size:13.5px; line-height:1.6; margin-bottom:18px; }
 .book-detail-actions{ display:flex; gap:10px; flex-wrap:wrap; }
-/* ---------- Modal de confirmação (data-confirmar) ---------- */
-.confirm-modal{
-  width: min(420px, calc(100vw - 32px)); padding: 24px 24px 20px;
-  background: var(--branco); color: var(--texto);
-  border: 1px solid var(--linha); border-radius: var(--radius); box-shadow: var(--sombra-forte);
-}
-.confirm-modal::backdrop{ background: rgba(15,18,38,0.55); }
-.confirm-modal[open]{ animation: confirm-entra .15s ease-out; }
-@keyframes confirm-entra{ from{ opacity:0; transform: translateY(8px) scale(.98); } }
-.confirm-titulo{ font-size:18px; margin-bottom:8px; }
-.confirm-texto{ font-size:14px; line-height:1.5; color: var(--texto-secundario); margin:0 0 22px; }
-.confirm-acoes{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
 .fav-star{ font-size:20px; line-height:1; background:none; border:none; cursor:pointer; color: var(--aviso); }
 
 /* ---------- Responsivo: menu lateral em drawer ---------- */

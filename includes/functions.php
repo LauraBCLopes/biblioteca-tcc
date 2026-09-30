@@ -8,9 +8,10 @@
  * (padrão "flash message" — útil depois de um redirect, por exemplo
  * após salvar um formulário).
  */
-function flash(string $mensagem, string $tipo = 'ok'): void
+function flash(string $mensagem, string $tipo = 'ok', ?array $acao = null): void
 {
-    $_SESSION['flash'] = ['mensagem' => $mensagem, 'tipo' => $tipo];
+    // $acao (opcional): ['texto' => 'Desfazer', 'url' => '...'] vira um link na mensagem.
+    $_SESSION['flash'] = ['mensagem' => $mensagem, 'tipo' => $tipo, 'acao' => $acao];
 }
 
 /**
