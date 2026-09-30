@@ -484,9 +484,21 @@ tbody tr:hover{ background: var(--fundo); }
 .book-card-body .autor{ font-size:12.5px; color: var(--texto-secundario); }
 .book-card-body .rodape-card{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:10px; }
 
+/* Celular: duas colunas de cards menores, para a capa não ocupar a tela inteira */
+@media (max-width: 600px){
+  .book-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; }
+  .book-card-body{ padding:10px 10px 12px; gap:4px; }
+  .book-card-body h4{ font-size:13px; }
+  .book-card-body .autor{ font-size:11.5px; }
+  .book-card-body .badge{ font-size:10px; padding:3px 8px; }
+  .book-card-body .rodape-card{ flex-direction:column; align-items:stretch; gap:6px; padding-top:8px; }
+  .book-card-body .rodape-card .badge{ align-self:flex-start; }
+  .book-card-body .rodape-card .btn{ width:100%; }
+}
+
 /* ---------- Detalhes do livro ---------- */
 .book-detail{ display:grid; grid-template-columns: 220px 1fr; gap:28px; align-items:start; }
-@media (max-width:640px){ .book-detail{ grid-template-columns:1fr; } .book-detail .book-cover, .book-detail .book-cover-placeholder{ max-width:220px; } }
+@media (max-width:640px){ .book-detail{ grid-template-columns:1fr; } .book-detail .book-cover, .book-detail .book-cover-placeholder{ max-width:160px; } }
 .book-detail-meta{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 14px; }
 .book-detail-desc{ color: var(--texto); font-size:13.5px; line-height:1.6; margin-bottom:18px; }
 .book-detail-actions{ display:flex; gap:10px; flex-wrap:wrap; }
