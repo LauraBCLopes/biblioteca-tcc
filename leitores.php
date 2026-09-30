@@ -177,7 +177,7 @@ require __DIR__ . '/includes/layout_topo.php';
           <input type="hidden" name="id" value="<?= (int) $leitorEditando['id'] ?>">
         <?php endif; ?>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end;">
+        <div class="form-grid">
           <div class="field">
             <label>Nome completo</label>
             <input required name="nome" placeholder="Ex: Maria Oliveira"
@@ -223,7 +223,7 @@ require __DIR__ . '/includes/layout_topo.php';
       </form>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap tabela-cartoes">
       <table>
         <thead>
           <tr><th>Leitor</th><th>Contato</th><th>Status</th><th>Empréstimos ativos</th><th>Cadastrado em</th><th>Ações</th></tr>

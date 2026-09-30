@@ -226,7 +226,7 @@ require __DIR__ . '/includes/layout_topo.php';
     <div class="form-panel">
       <h3 style="margin-bottom:16px;">Registrar nova reserva</h3>
       <form method="post" action="reservas.php">
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end;">
+        <div class="form-grid">
           <div class="field">
             <label>Livro</label>
             <select required name="livro_id">
@@ -279,7 +279,7 @@ require __DIR__ . '/includes/layout_topo.php';
       <?php endforeach; ?>
     </div>
 
-    <div class="table-wrap">
+    <div class="table-wrap tabela-cartoes">
       <table>
         <thead>
           <tr>

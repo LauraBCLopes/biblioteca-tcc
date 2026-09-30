@@ -76,6 +76,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Tabelas que viram cards no celular: copia o nome de cada coluna para
+  // as células (data-label), que o CSS mostra ao lado do valor.
+  document.querySelectorAll('.tabela-cartoes table').forEach(function (tabela) {
+    var nomes = Array.prototype.map.call(tabela.querySelectorAll('thead th'), function (th) {
+      return th.textContent.trim();
+    });
+    tabela.querySelectorAll('tbody tr').forEach(function (linha) {
+      Array.prototype.forEach.call(linha.children, function (celula, i) {
+        if (!celula.hasAttribute('colspan') && nomes[i]) {
+          celula.setAttribute('data-label', nomes[i]);
+        }
+      });
+    });
+  });
+
   // Confirmação dentro do site (no lugar do confirm() do navegador) para
   // links com data-confirmar. Só segue o link se a pessoa confirmar.
   var modal = null;

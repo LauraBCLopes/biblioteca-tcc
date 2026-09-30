@@ -440,7 +440,7 @@ require __DIR__ . '/includes/layout_topo.php';
           <input type="hidden" name="id" value="<?= (int) $livroEditando['id'] ?>">
         <?php endif; ?>
 
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end;">
+        <div class="form-grid">
           <div class="field">
             <label>Título</label>
             <input required name="titulo" placeholder="Ex: Dom Casmurro"
@@ -463,7 +463,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="field">
+          <div class="field meia">
             <label>Ano</label>
             <input name="ano_publicacao" type="number" min="0" max="2100" placeholder="1899"
                    value="<?= e((string) ($livroEditando['ano_publicacao'] ?? '')) ?>">
@@ -483,7 +483,7 @@ require __DIR__ . '/includes/layout_topo.php';
             <input name="capa_url" type="url" placeholder="https://…"
                    value="<?= e($livroEditando['capa_url'] ?? '') ?>">
           </div>
-          <div class="field">
+          <div class="field meia">
             <label>Exemplares (total)</label>
             <input required name="exemplares_total" type="number" min="1"
                    value="<?= e((string) ($livroEditando['exemplares_total'] ?? '1')) ?>">

@@ -281,6 +281,8 @@ main{ padding: 26px 30px 60px; }
 .view-head .eyebrow{ font-size:12px; letter-spacing:0.5px; text-transform:uppercase; color: var(--roxo); font-weight:700; }
 .view-head h2{ font-size: 26px; margin-top:4px; }
 
+.form-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap:14px; align-items:end; }
+
 .panel, .form-panel{ background:var(--branco); border:1px solid var(--linha); border-radius: var(--radius); box-shadow: var(--sombra); padding: 20px 22px 22px; margin-bottom:24px; }
 .table-wrap{ overflow-x:auto; background:var(--branco); border:1px solid var(--linha); border-radius: var(--radius); box-shadow: var(--sombra); }
 table{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
@@ -296,6 +298,52 @@ tbody tr:hover{ background: var(--fundo); }
 .badge.warn{ background: var(--aviso-bg); color: var(--aviso); }
 .badge.alert{ background: var(--alerta-bg); color: var(--alerta); }
 .badge.muted{ background: var(--muted-bg); color: var(--texto-secundario); }
+
+/* ---------- Celular: formulários e tabelas ---------- */
+@media (max-width: 600px){
+  .view-head{ margin-bottom:16px; }
+  .view-head h2{ font-size:22px; }
+
+  .form-panel{ padding:16px 16px 18px; }
+  .form-panel h3{ font-size:17px; margin-bottom:12px !important; }
+  .form-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; grid-auto-flow: row dense; }
+  .form-grid > *{ grid-column: span 2; }
+  .form-grid > .meia{ grid-column: span 1; }
+  .form-grid .field{ margin-bottom:0; }
+  /* 16px evita o zoom automático do iPhone ao tocar no campo */
+  .form-panel .field input, .form-panel .field select, .form-panel textarea{ font-size:16px !important; }
+  .form-panel form .btn{ width:100%; padding:12px 18px; }
+
+  /* Tabelas viram uma lista de cards: cada linha é um card,
+     com o nome da coluna (data-label, posto pelo JS) ao lado do valor. */
+  .table-wrap.tabela-cartoes{ background:none; border:none; box-shadow:none; overflow:visible; }
+  .tabela-cartoes table{ min-width:0; }
+  .tabela-cartoes thead{ display:none; }
+  .tabela-cartoes table, .tabela-cartoes tbody, .tabela-cartoes tr, .tabela-cartoes td{ display:block; width:100%; }
+  .tabela-cartoes tr{
+    background:var(--branco); border:1px solid var(--linha); border-radius: var(--radius);
+    box-shadow: var(--sombra); padding:6px 14px; margin-bottom:12px;
+  }
+  .tabela-cartoes tbody tr:hover{ background:var(--branco); }
+  .tabela-cartoes tbody td{
+    display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:6px 8px;
+    padding:9px 0; border-bottom:1px solid var(--linha); text-align:right;
+  }
+  .tabela-cartoes tbody td::before{
+    content: attr(data-label); flex-shrink:0; text-align:left;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--texto-secundario);
+    font-family:'Inter', Arial, sans-serif; margin-right:auto;
+  }
+  /* Primeira célula = título do card; última = botões */
+  .tabela-cartoes tbody td:first-child{ display:block; text-align:left; font-size:14px; }
+  .tabela-cartoes tbody td:first-child::before{ display:block; margin-bottom:4px; }
+  .tabela-cartoes tbody td:last-child{ border-bottom:none; justify-content:flex-start; flex-wrap:wrap; gap:8px; padding-top:12px; }
+  .tabela-cartoes tbody td:last-child::before{ display:none; }
+  .tabela-cartoes tbody td:not(:first-child) br{ display:none; }
+  .tabela-cartoes tbody td:last-child .btn{ flex:1 1 auto; }
+  .tabela-cartoes tbody td[colspan]{ display:block; }
+  .tabela-cartoes tbody td[colspan]::before{ display:none; }
+}
 
 /* ---------- Dashboard ---------- */
 .stat-grid{ display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:16px; margin-bottom:24px; }
