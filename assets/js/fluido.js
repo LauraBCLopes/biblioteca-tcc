@@ -25,7 +25,7 @@
     PARADO_MS: 4000,        // sem mexer o mouse por esse tempo, a simulação pausa
     OPACIDADE: 0.7,         // opacidade normal do fluido
     PERTO_CAMPO: 110,       // a partir dessa distância (px) de um campo, a fumaça começa a diminuir
-    MINIMO_CAMPO: 0.15      // força que sobra com o cursor em cima do campo / campo em foco
+    MINIMO_CAMPO: 0.3       // força que sobra com o cursor em cima de um campo
   };
 
   // Roxo, azul e magenta do site; a cor vai passando de uma para outra.
@@ -37,6 +37,8 @@
 
   var canvas = document.createElement('canvas');
   canvas.className = 'cursor-fluido';
+  // login/cadastro têm fundo azul forte: lá o fluido clareia (brilho neon)
+  if (document.querySelector('.auth-page')) { canvas.classList.add('sobre-cor'); }
   canvas.setAttribute('aria-hidden', 'true');
 
   var params = { alpha: true, depth: false, stencil: false, antialias: false, premultipliedAlpha: true, preserveDrawingBuffer: false };
@@ -369,7 +371,8 @@
   var mouse = { x: 0, y: 0, dx: 0, dy: 0, moveu: false, primeiro: true, px: -1000, py: -1000 };
 
   // Perto de campos de formulário a fumaça atrapalha: calcula um fator de 1
-  // (longe de tudo) até MINIMO_CAMPO (em cima do campo ou digitando nele).
+  // (longe de tudo) até MINIMO_CAMPO (em cima do campo). Como o fluido fica
+  // atrás das caixas, isso só evita a fumaça "vazando" pelas bordas delas.
   var SELETOR_CAMPO = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]), textarea, select';
 
   function fatorCampos() {
@@ -384,12 +387,7 @@
     }
     var t = Math.min(menor / CONFIG.PERTO_CAMPO, 1);
     t = t * t * (3 - 2 * t);   // transição suave
-    var fator = CONFIG.MINIMO_CAMPO + (1 - CONFIG.MINIMO_CAMPO) * t;
-    var foco = document.activeElement;
-    if (foco && foco.matches && foco.matches(SELETOR_CAMPO)) {
-      fator = Math.min(fator, 0.35);
-    }
-    return fator;
+    return CONFIG.MINIMO_CAMPO + (1 - CONFIG.MINIMO_CAMPO) * t;
   }
   var fator = 1, fatorSuave = 1;
   var ultimoMovimento = 0;
