@@ -22,7 +22,10 @@
     RAIO: 0.12,             // tamanho de cada "pincelada"
     FORCA: 3500,            // quanto o mouse empurra o fluido
     INTENSIDADE: 0.12,      // força da cor de cada pincelada
-    PARADO_MS: 4000         // sem mexer o mouse por esse tempo, a simulação pausa
+    PARADO_MS: 4000,        // sem mexer o mouse por esse tempo, a simulação pausa
+    OPACIDADE: 0.7,         // opacidade normal do fluido
+    PERTO_CAMPO: 110,       // a partir dessa distância (px) de um campo, a fumaça começa a diminuir
+    MINIMO_CAMPO: 0.15      // força que sobra com o cursor em cima do campo / campo em foco
   };
 
   // Roxo, azul e magenta do site; a cor vai passando de uma para outra.
@@ -363,7 +366,32 @@
   }
 
   // ---------- Mouse ----------
-  var mouse = { x: 0, y: 0, dx: 0, dy: 0, moveu: false, primeiro: true };
+  var mouse = { x: 0, y: 0, dx: 0, dy: 0, moveu: false, primeiro: true, px: -1000, py: -1000 };
+
+  // Perto de campos de formulário a fumaça atrapalha: calcula um fator de 1
+  // (longe de tudo) até MINIMO_CAMPO (em cima do campo ou digitando nele).
+  var SELETOR_CAMPO = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]), textarea, select';
+
+  function fatorCampos() {
+    var menor = Infinity;
+    var campos = document.querySelectorAll(SELETOR_CAMPO);
+    for (var i = 0; i < campos.length; i++) {
+      var r = campos[i].getBoundingClientRect();
+      if (!r.width || r.bottom < 0 || r.top > window.innerHeight) { continue; }
+      var dx = Math.max(r.left - mouse.px, 0, mouse.px - r.right);
+      var dy = Math.max(r.top - mouse.py, 0, mouse.py - r.bottom);
+      menor = Math.min(menor, Math.sqrt(dx * dx + dy * dy));
+    }
+    var t = Math.min(menor / CONFIG.PERTO_CAMPO, 1);
+    t = t * t * (3 - 2 * t);   // transição suave
+    var fator = CONFIG.MINIMO_CAMPO + (1 - CONFIG.MINIMO_CAMPO) * t;
+    var foco = document.activeElement;
+    if (foco && foco.matches && foco.matches(SELETOR_CAMPO)) {
+      fator = Math.min(fator, 0.35);
+    }
+    return fator;
+  }
+  var fator = 1, fatorSuave = 1;
   var ultimoMovimento = 0;
 
   document.addEventListener('mousemove', function (evento) {
@@ -379,6 +407,8 @@
     }
     mouse.x = x;
     mouse.y = y;
+    mouse.px = evento.clientX;
+    mouse.py = evento.clientY;
     ultimoMovimento = performance.now();
   });
   document.documentElement.addEventListener('mouseleave', function () { mouse.primeiro = true; });
@@ -393,9 +423,15 @@
 
     if (agora - ultimoMovimento < CONFIG.PARADO_MS) {
       if (mouse.moveu) {
-        pincelada(mouse.x, mouse.y, mouse.dx * CONFIG.FORCA, mouse.dy * CONFIG.FORCA, corAtual(agora));
+        fator = fatorCampos();
+        var cor = corAtual(agora).map(function (v) { return v * fator; });
+        var forca = CONFIG.FORCA * fator;
+        pincelada(mouse.x, mouse.y, mouse.dx * forca, mouse.dy * forca, cor);
         mouse.moveu = false;
       }
+      // a fumaça que já está na tela também some aos poucos perto dos campos
+      fatorSuave += (fator - fatorSuave) * 0.08;
+      canvas.style.opacity = (CONFIG.OPACIDADE * (0.3 + 0.7 * fatorSuave)).toFixed(3);
       passo(dt);
       mostrar();
       limpo = false;
