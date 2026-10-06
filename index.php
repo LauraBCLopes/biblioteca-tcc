@@ -158,18 +158,16 @@ if (isAdmin()) {
     $stmt->execute(['id' => $admin['id']]);
     $minhasReservasPendentes = (int) $stmt->fetchColumn();
 
-    // --- meus empréstimos que pedem atenção: atrasados + vencendo nos próximos 3 dias ---
+    // --- livros que estão com o aluno agora (com botão para avisar a devolução) ---
     $stmt = $pdo->prepare(
-        "SELECT e.id, e.data_prevista, e.status, l.titulo AS livro_titulo
+        "SELECT e.id, e.data_prevista, e.status, e.devolucao_solicitada, l.titulo AS livro_titulo
          FROM emprestimos e
          JOIN livros l ON l.id = e.livro_id
-         WHERE e.leitor_id = :id
-           AND (e.status = 'atrasado'
-                OR (e.status = 'ativo' AND e.data_prevista BETWEEN :hoje AND :em_tres_dias))
+         WHERE e.leitor_id = :id AND e.status != 'devolvido'
          ORDER BY e.data_prevista ASC"
     );
-    $stmt->execute(['id' => $admin['id'], 'hoje' => $hoje, 'em_tres_dias' => $emTresDias]);
-    $minhaListaAtencao = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
+    $stmt->execute(['id' => $admin['id']]);
+    $meusLivrosComigo = comDiasAteVencimento($stmt->fetchAll(), $hojeTs);
 
     // --- meu histórico de leitura (empréstimos já devolvidos) ---
     $stmt = $pdo->prepare("SELECT data_devolucao, data_prevista FROM emprestimos WHERE leitor_id = :id AND data_devolucao IS NOT NULL");
@@ -577,22 +575,32 @@ require __DIR__ . '/includes/layout_topo.php';
     </div>
 
     <div class="panel">
-      <h3 style="margin-bottom:16px;">Seus empréstimos que pedem atenção</h3>
-      <?php if (!$minhaListaAtencao): ?>
-        <p style="color:var(--texto-secundario);font-size:13px;">Nenhum empréstimo seu está atrasado ou vencendo nos próximos dias.</p>
-      <?php else: foreach ($minhaListaAtencao as $item): ?>
+      <h3 style="margin-bottom:16px;">Livros que estão com você</h3>
+      <?php if (!$meusLivrosComigo): ?>
+        <p style="color:var(--texto-secundario);font-size:13px;">Você não está com nenhum livro emprestado no momento.</p>
+      <?php else: foreach ($meusLivrosComigo as $item): ?>
         <div class="attention-item">
-          <strong><?= e($item['livro_titulo']) ?></strong>
-          <div style="text-align:right;">
+          <span>
+            <strong><?= e($item['livro_titulo']) ?></strong><br>
             <?php if ($item['status'] === 'atrasado'): ?>
               <span class="badge alert">Atrasado <?= abs((int) $item['dias']) ?>d</span>
             <?php elseif ((int) $item['dias'] === 0): ?>
               <span class="badge warn">Vence hoje</span>
-            <?php else: ?>
+            <?php elseif ((int) $item['dias'] <= 3): ?>
               <span class="badge warn">Vence em <?= (int) $item['dias'] ?>d</span>
+            <?php else: ?>
+              <span class="badge ok">Em dia</span>
             <?php endif; ?>
-            <br><span class="mono" style="color:var(--texto-secundario);font-size:11px;"><?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
-          </div>
+            <span class="mono" style="color:var(--texto-secundario);font-size:11px;">até <?= date('d/m/Y', strtotime($item['data_prevista'])) ?></span>
+          </span>
+          <?php if (bdBool($item['devolucao_solicitada'])): ?>
+            <span class="badge warn">Devolução aguardando confirmação</span>
+          <?php else: ?>
+            <a class="btn primary small" href="emprestimos.php?avisar_devolucao=<?= (int) $item['id'] ?>&amp;voltar=inicio"
+               data-confirmar="Avisar a biblioteca que você devolveu &quot;<?= e($item['livro_titulo']) ?>&quot;? O empréstimo só é encerrado depois que a biblioteca confirmar o recebimento."
+               data-confirmar-titulo="Devolver livro"
+               data-confirmar-botao="Avisar devolução">Devolver</a>
+          <?php endif; ?>
         </div>
       <?php endforeach; endif; ?>
       <div style="margin-top:16px; display:flex; gap:10px;">

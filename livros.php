@@ -284,7 +284,7 @@ if ($verId) {
         $stmt->execute(['leitor_id' => $usuario['id'], 'livro_id' => $verId]);
         $reservaDoAluno = $stmt->fetch();
 
-        $stmt = $pdo->prepare("SELECT id FROM emprestimos WHERE leitor_id = :leitor_id AND livro_id = :livro_id AND status != 'devolvido'");
+        $stmt = $pdo->prepare("SELECT id, devolucao_solicitada FROM emprestimos WHERE leitor_id = :leitor_id AND livro_id = :livro_id AND status != 'devolvido'");
         $stmt->execute(['leitor_id' => $usuario['id'], 'livro_id' => $verId]);
         $emprestimoAtivoDoAluno = $stmt->fetch();
     }
@@ -399,8 +399,13 @@ require __DIR__ . '/includes/layout_topo.php';
                data-confirmar-titulo="Excluir livro"
                data-confirmar-botao="Excluir">Excluir</a>
           <?php else: ?>
-            <?php if ($emprestimoAtivoDoAluno): ?>
-              <button class="btn ghost" type="button" disabled>Você já está com este livro</button>
+            <?php if ($emprestimoAtivoDoAluno && bdBool($emprestimoAtivoDoAluno['devolucao_solicitada'])): ?>
+              <button class="btn ghost" type="button" disabled>Devolução aguardando confirmação</button>
+            <?php elseif ($emprestimoAtivoDoAluno): ?>
+              <a class="btn primary" href="emprestimos.php?avisar_devolucao=<?= (int) $emprestimoAtivoDoAluno['id'] ?>&amp;voltar=livro"
+                 data-confirmar="Avisar a biblioteca que você devolveu &quot;<?= e($livroDetalhe['titulo']) ?>&quot;? O empréstimo só é encerrado depois que a biblioteca confirmar o recebimento."
+                 data-confirmar-titulo="Devolver livro"
+                 data-confirmar-botao="Avisar devolução">Devolver livro</a>
             <?php elseif ($reservaDoAluno): ?>
               <button class="btn ghost" type="button" disabled>Reserva pendente na fila</button>
             <?php else: ?>

@@ -156,7 +156,15 @@ if (!empty($_GET['avisar_devolucao'])) {
         flash('Devolução avisada. Assim que a biblioteca confirmar o recebimento, o empréstimo será encerrado.');
     }
 
-    header('Location: emprestimos.php');
+    // volta para a tela onde o botão foi clicado (início ou página do livro)
+    $voltar = $_GET['voltar'] ?? '';
+    if ($voltar === 'inicio') {
+        header('Location: index.php');
+    } elseif ($voltar === 'livro' && $emprestimo) {
+        header('Location: livros.php?ver=' . (int) $emprestimo['livro_id']);
+    } else {
+        header('Location: emprestimos.php');
+    }
     exit;
 }
 
