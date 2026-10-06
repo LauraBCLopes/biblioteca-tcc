@@ -144,7 +144,7 @@ unset($_SESSION['cadastro_valores']);
           </div>
           <div class="field">
             <label for="confirmar_senha">Confirmar senha</label>
-            <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6">
+            <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6" data-confirma="senha">
           </div>
           <button type="submit" class="btn primary full">Criar minha conta</button>
         </form>

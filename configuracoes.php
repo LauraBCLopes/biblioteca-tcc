@@ -186,7 +186,7 @@ require __DIR__ . '/includes/layout_topo.php';
         </div>
         <div class="field">
           <label for="confirmar_senha">Confirmar nova senha</label>
-          <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6">
+          <input type="password" id="confirmar_senha" name="confirmar_senha" required minlength="6" data-confirma="nova_senha">
         </div>
         <button type="submit" class="btn primary">Salvar nova senha</button>
       </form>
@@ -232,7 +232,7 @@ require __DIR__ . '/includes/layout_topo.php';
           </div>
           <div class="field">
             <label for="confirmar_senha_admin">Confirmar senha</label>
-            <input type="password" id="confirmar_senha_admin" name="confirmar_senha_admin" required minlength="6">
+            <input type="password" id="confirmar_senha_admin" name="confirmar_senha_admin" required minlength="6" data-confirma="nova_senha_admin">
           </div>
           <button type="submit" class="btn primary">Criar administrador</button>
         </form>
