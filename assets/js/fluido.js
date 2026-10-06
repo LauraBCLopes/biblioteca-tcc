@@ -1,4 +1,5 @@
-// Rastro de fluido atrás do mouse ("fluid motion cursor"): uma simulação de
+// Rastro de fluido atrás do mouse ("fluid motion cursor") nas telas de login
+// e cadastro (só login.php e cadastro.php carregam este arquivo): simulação de
 // tinta em WebGL que o mouse empurra e faz girar, nas cores do site.
 // Baseado na WebGL Fluid Simulation de Pavel Dobryakov (licença MIT).
 // Só roda em computador com mouse, com WebGL, e para quem não pediu menos
