@@ -238,12 +238,7 @@ require __DIR__ . '/includes/layout_topo.php';
         <tbody>
           <?php if (!$leitores): ?>
             <tr><td colspan="6"><div style="padding:30px;text-align:center;color:var(--texto-secundario);">Nenhum leitor encontrado.</div></td></tr>
-          <?php else: foreach ($leitores as $u):
-              $confirmMsg = htmlspecialchars(
-                  json_encode('Remover "' . $u['nome'] . '" do cadastro de leitores?', JSON_UNESCAPED_UNICODE),
-                  ENT_QUOTES
-              );
-          ?>
+          <?php else: foreach ($leitores as $u): ?>
             <tr>
               <td>
                 <span class="avatar-init sm"><?= e(iniciaisNome($u['nome'])) ?></span>
@@ -275,12 +270,16 @@ require __DIR__ . '/includes/layout_topo.php';
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <a class="btn ghost small" href="?editar=<?= (int) $u['id'] ?>">Editar</a>
                 <a class="btn ghost small" href="?resetar_senha=<?= (int) $u['id'] ?>"
-                   onclick="return confirm('Remover a senha atual deste leitor? Ele(a) vai precisar definir uma nova em Criar conta.');">Redefinir senha</a>
+                   data-confirmar="Remover a senha atual de &quot;<?= e($u['nome']) ?>&quot;? O leitor vai precisar definir uma nova senha em Criar conta."
+                   data-confirmar-titulo="Redefinir senha"
+                   data-confirmar-botao="Redefinir senha">Redefinir senha</a>
                 <a class="btn ghost small" href="?bloqueio=<?= (int) $u['id'] ?>">
                   <?= $u['status'] === 'bloqueado' ? 'Desbloquear' : 'Bloquear' ?>
                 </a>
                 <a class="btn danger small" href="?excluir=<?= (int) $u['id'] ?>"
-                   onclick='return confirm(<?= $confirmMsg ?>);'>Excluir</a>
+                   data-confirmar="Remover &quot;<?= e($u['nome']) ?>&quot; do cadastro de leitores?"
+                   data-confirmar-titulo="Excluir leitor"
+                   data-confirmar-botao="Excluir">Excluir</a>
               </td>
             </tr>
           <?php endforeach; endif; ?>

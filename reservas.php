@@ -320,7 +320,9 @@ require __DIR__ . '/includes/layout_topo.php';
                     <?php endif; ?>
                   <?php endif; ?>
                   <a class="btn danger small" href="?cancelar=<?= (int) $r['id'] ?>"
-                     onclick="return confirm('Cancelar esta reserva?');">Cancelar</a>
+                     data-confirmar="Cancelar a reserva de &quot;<?= e($r['livro_titulo']) ?>&quot;? A reserva sai da fila deste livro."
+                     data-confirmar-titulo="Cancelar reserva"
+                     data-confirmar-botao="Cancelar reserva">Cancelar</a>
                 <?php endif; ?>
               </td>
             </tr>
