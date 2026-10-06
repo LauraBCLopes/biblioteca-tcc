@@ -6,7 +6,7 @@ requireLogin();
 $pdo = getConexao();
 $usuario = adminAtual();
 
-// ---------- registrar nova reserva — admin ou o próprio aluno ----------
+// ---------- registrar nova reserva (botão "Reservar" da página do livro) ----------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $livroId  = (int) ($_POST['livro_id'] ?? 0);
     // aluno só pode reservar para si mesmo, mesmo que tente enviar outro leitor_id
@@ -197,13 +197,6 @@ $pendentesCount = count(array_filter($minhas, function ($r) {
     return $r['status'] === 'pendente';
 }));
 
-// --- opções para o formulário ---
-$livros = $pdo->query('SELECT id, titulo, exemplares_disponiveis FROM livros ORDER BY titulo')->fetchAll();
-$leitoresAtivos = [];
-if (isAdmin()) {
-    $leitoresAtivos = $pdo->query("SELECT id, nome FROM leitores WHERE status = 'ativo' ORDER BY nome")->fetchAll();
-}
-
 $STATUS_LABEL = [
     'pendente' => ['t' => 'Pendente', 'c' => 'warn'],
     'atendida' => ['t' => 'Atendida', 'c' => 'ok'],
@@ -221,54 +214,6 @@ require __DIR__ . '/includes/layout_topo.php';
         <h2><?= isAdmin() ? 'Fila de reservas' : 'Minhas reservas' ?></h2>
       </div>
       <div class="mono text-muted" style="font-size:12.5px;"><?= $pendentesCount ?> pendente(s)</div>
-    </div>
-
-    <div class="form-panel">
-      <h3 style="margin-bottom:16px;">Registrar nova reserva</h3>
-      <form method="post" action="reservas.php">
-        <div class="form-grid">
-          <div class="field">
-            <label>Livro</label>
-            <select required name="livro_id">
-              <option value="">Selecione</option>
-              <?php foreach ($livros as $l): ?>
-                <option value="<?= $l['id'] ?>">
-                  <?= e($l['titulo']) ?> — <?= (int) $l['exemplares_disponiveis'] ?> disp.
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <?php if (isAdmin()): ?>
-          <div class="field">
-            <label>Leitor</label>
-            <select required name="leitor_id">
-              <?php if (!$leitoresAtivos): ?>
-                <option value="" disabled selected>Nenhum leitor ativo disponível</option>
-              <?php else: ?>
-                <option value="">Selecione</option>
-                <?php foreach ($leitoresAtivos as $u): ?>
-                  <option value="<?= $u['id'] ?>"><?= e($u['nome']) ?></option>
-                <?php endforeach; ?>
-              <?php endif; ?>
-            </select>
-          </div>
-          <?php endif; ?>
-        </div>
-        <div style="margin-top:16px;">
-          <button class="btn primary" type="submit">Registrar reserva</button>
-        </div>
-        <?php if (isAdmin()): ?>
-        <div class="hint" style="text-align:left;margin-top:12px;">
-          Reservas ficam em fila por livro (ordem de chegada). Quando houver exemplar disponível,
-          use "Atender" para converter a reserva em empréstimo automaticamente.
-        </div>
-        <?php else: ?>
-        <div class="hint" style="text-align:left;margin-top:12px;">
-          Sua reserva entra na fila do livro escolhido. Quando um exemplar ficar disponível para você,
-          a biblioteca fará a entrega e registrará o empréstimo.
-        </div>
-        <?php endif; ?>
-      </form>
     </div>
 
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
