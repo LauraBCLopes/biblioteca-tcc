@@ -14,6 +14,7 @@ $flash = pegarFlash();
 
 $pdoNav = getConexao();
 $navRenovacoes = [];   // pedidos de renovação feitos pelos alunos (só aparecem para o admin)
+$navDevolucoes = [];   // devoluções avisadas pelos alunos, aguardando confirmação (só admin)
 if (isAdmin()) {
     $navAtrasados = (int) $pdoNav->query("SELECT COUNT(*) FROM emprestimos WHERE status = 'atrasado'")->fetchColumn();
     $navReservasPendentes = (int) $pdoNav->query("SELECT COUNT(*) FROM reservas WHERE status = 'pendente'")->fetchColumn();
@@ -25,6 +26,14 @@ if (isAdmin()) {
          WHERE e.renovacao_solicitada = TRUE AND e.status != 'devolvido'
          ORDER BY e.data_prevista"
     )->fetchAll();
+    $navDevolucoes = $pdoNav->query(
+        "SELECT e.id, l.titulo AS livro_titulo, r.nome AS leitor_nome
+         FROM emprestimos e
+         JOIN livros l   ON l.id = e.livro_id
+         JOIN leitores r ON r.id = e.leitor_id
+         WHERE e.devolucao_solicitada = TRUE AND e.status != 'devolvido'
+         ORDER BY e.data_prevista"
+    )->fetchAll();
 } else {
     $stmt = $pdoNav->prepare("SELECT COUNT(*) FROM emprestimos WHERE status = 'atrasado' AND leitor_id = :id");
     $stmt->execute(['id' => $admin['id']]);
@@ -34,7 +43,7 @@ if (isAdmin()) {
     $stmt->execute(['id' => $admin['id']]);
     $navReservasPendentes = (int) $stmt->fetchColumn();
 }
-$navTotalAvisos = $navAtrasados + $navReservasPendentes + count($navRenovacoes);
+$navTotalAvisos = $navAtrasados + $navReservasPendentes + count($navRenovacoes) + count($navDevolucoes);
 
 function linkAtivo(string $slug, string $paginaAtual): string
 {
@@ -117,6 +126,16 @@ function navIcone(string $slug): string
             <?php if ($navTotalAvisos === 0): ?>
               <div class="dropdown-empty">Nenhuma notificação por aqui.</div>
             <?php else: ?>
+              <?php foreach (array_slice($navDevolucoes, 0, 5) as $pedido): ?>
+                <a class="dropdown-item" href="emprestimos.php#emprestimo-<?= (int) $pedido['id'] ?>">
+                  <?= e($pedido['leitor_nome']) ?> devolveu "<?= e($pedido['livro_titulo']) ?>" — confirme o recebimento
+                </a>
+              <?php endforeach; ?>
+              <?php if (count($navDevolucoes) > 5): ?>
+                <a class="dropdown-item" href="emprestimos.php">
+                  E mais <?= count($navDevolucoes) - 5 ?> devolução(ões) para confirmar
+                </a>
+              <?php endif; ?>
               <?php foreach (array_slice($navRenovacoes, 0, 5) as $pedido): ?>
                 <a class="dropdown-item" href="emprestimos.php#emprestimo-<?= (int) $pedido['id'] ?>">
                   <?= e($pedido['leitor_nome']) ?> pediu renovação de "<?= e($pedido['livro_titulo']) ?>"

@@ -91,6 +91,7 @@ CREATE TABLE emprestimos (
   status                text NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'atrasado', 'devolvido')),
   renovacoes            smallint NOT NULL DEFAULT 0 CHECK (renovacoes >= 0),
   renovacao_solicitada  boolean NOT NULL DEFAULT false,   -- aluno pediu renovação; aguarda aprovação do admin
+  devolucao_solicitada  boolean NOT NULL DEFAULT false,   -- aluno avisou que devolveu; aguarda confirmação do admin
   criado_em             timestamptz NOT NULL DEFAULT now()
 );
 

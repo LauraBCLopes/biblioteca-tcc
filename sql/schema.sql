@@ -89,6 +89,7 @@ CREATE TABLE emprestimos (
   status                ENUM('ativo', 'atrasado', 'devolvido') NOT NULL DEFAULT 'ativo',
   renovacoes            TINYINT UNSIGNED NOT NULL DEFAULT 0,
   renovacao_solicitada  TINYINT(1) NOT NULL DEFAULT 0,   -- aluno pediu renovação; aguarda aprovação do admin
+  devolucao_solicitada  TINYINT(1) NOT NULL DEFAULT 0,   -- aluno avisou que devolveu; aguarda confirmação do admin
   criado_em             DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_emp_livro
     FOREIGN KEY (livro_id) REFERENCES livros(id)

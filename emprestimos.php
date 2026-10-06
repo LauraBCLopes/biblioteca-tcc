@@ -88,7 +88,9 @@ if (!empty($_GET['devolver'])) {
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare("UPDATE emprestimos SET status = 'devolvido', data_devolucao = :hoje WHERE id = :id");
+        $stmt = $pdo->prepare("UPDATE emprestimos
+            SET status = 'devolvido', data_devolucao = :hoje, devolucao_solicitada = FALSE
+            WHERE id = :id");
         $stmt->execute(['hoje' => date('Y-m-d'), 'id' => $idDevolver]);
 
         $stmt = $pdo->prepare('UPDATE livros
@@ -114,6 +116,7 @@ if (!empty($_GET['devolver'])) {
             'id'            => $idDevolver,
             'status'        => $emprestimo['status'],
             'leitor_status' => $statusLeitorAntes,
+            'solicitada'    => bdBool($emprestimo['devolucao_solicitada']),
             'em'            => time(),
         ];
         $acaoDesfazer = ['texto' => 'Desfazer', 'url' => 'emprestimos.php?desfazer_devolucao=' . $idDevolver];
@@ -128,6 +131,43 @@ if (!empty($_GET['devolver'])) {
         $pdo->rollBack();
         flash('Não foi possível registrar a devolução: ' . $ex->getMessage(), 'erro');
     }
+
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- aluno avisa que devolveu o livro (o admin confirma depois) ----------
+if (!empty($_GET['avisar_devolucao'])) {
+    $idAvisar = (int) $_GET['avisar_devolucao'];
+
+    $stmt = $pdo->prepare('SELECT * FROM emprestimos WHERE id = :id');
+    $stmt->execute(['id' => $idAvisar]);
+    $emprestimo = $stmt->fetch();
+
+    if (isAdmin()) {
+        flash('Administradores registram a devolução direto, pelo botão "Devolver".', 'erro');
+    } elseif (!$emprestimo || (int) $emprestimo['leitor_id'] !== (int) $usuario['id']) {
+        flash('Você só pode devolver os seus próprios empréstimos.', 'erro');
+    } elseif ($emprestimo['status'] === 'devolvido') {
+        flash('Este empréstimo já foi devolvido.', 'erro');
+    } else {
+        $stmt = $pdo->prepare('UPDATE emprestimos SET devolucao_solicitada = TRUE WHERE id = :id');
+        $stmt->execute(['id' => $idAvisar]);
+        flash('Devolução avisada. Assim que a biblioteca confirmar o recebimento, o empréstimo será encerrado.');
+    }
+
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- admin recusa o aviso de devolução (o livro não chegou) ----------
+if (!empty($_GET['recusar_devolucao'])) {
+    requireAdmin();
+
+    $stmt = $pdo->prepare("UPDATE emprestimos SET devolucao_solicitada = FALSE
+        WHERE id = :id AND status != 'devolvido'");
+    $stmt->execute(['id' => (int) $_GET['recusar_devolucao']]);
+    flash('Aviso de devolução recusado: o empréstimo continua em aberto.');
 
     header('Location: emprestimos.php');
     exit;
@@ -164,8 +204,15 @@ if (!empty($_GET['desfazer_devolucao'])) {
             throw new RuntimeException('Não dá para desfazer: o exemplar devolvido já foi emprestado novamente.');
         }
 
-        $stmt = $pdo->prepare('UPDATE emprestimos SET status = :status, data_devolucao = NULL WHERE id = :id');
-        $stmt->execute(['status' => $ultima['status'], 'id' => $idDesfazer]);
+        // se o aluno tinha avisado a devolução, o aviso volta a ficar pendente
+        $stmt = $pdo->prepare('UPDATE emprestimos
+            SET status = :status, data_devolucao = NULL, devolucao_solicitada = :solicitada
+            WHERE id = :id');
+        $stmt->execute([
+            'status'     => $ultima['status'],
+            'solicitada' => !empty($ultima['solicitada']) ? 1 : 0,
+            'id'         => $idDesfazer,
+        ]);
 
         $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
         $stmt->execute(['id' => $emprestimo['livro_id']]);
@@ -441,7 +488,12 @@ require __DIR__ . '/includes/layout_topo.php';
               </td>
               <td class="mono"><?= date('d/m/Y', strtotime($e['data_emprestimo'])) ?></td>
               <td class="mono"><?= date('d/m/Y', strtotime($e['data_prevista'])) ?></td>
-              <td><span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span></td>
+              <td>
+                <span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span>
+                <?php if ($e['status'] !== 'devolvido' && bdBool($e['devolucao_solicitada'])): ?>
+                  <br><span class="badge warn">Devolução a confirmar</span>
+                <?php endif; ?>
+              </td>
               <td class="mono">
                 <?= (int) $e['renovacoes'] ?>/2
                 <?php if (bdBool($e['renovacao_solicitada'])): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
@@ -449,7 +501,15 @@ require __DIR__ . '/includes/layout_topo.php';
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <?php if ($e['status'] !== 'devolvido'): ?>
                   <?php if (isAdmin()): ?>
-                    <a class="btn primary small" href="?devolver=<?= (int) $e['id'] ?>">Devolver</a>
+                    <?php if (bdBool($e['devolucao_solicitada'])): ?>
+                      <a class="btn primary small" href="?devolver=<?= (int) $e['id'] ?>">Confirmar devolução</a>
+                      <a class="btn danger small" href="?recusar_devolucao=<?= (int) $e['id'] ?>"
+                         data-confirmar="O livro não chegou na biblioteca? O aviso do aluno será descartado e o empréstimo continua em aberto."
+                         data-confirmar-titulo="Recusar devolução"
+                         data-confirmar-botao="Recusar">Não recebido</a>
+                    <?php else: ?>
+                      <a class="btn primary small" href="?devolver=<?= (int) $e['id'] ?>">Devolver</a>
+                    <?php endif; ?>
                     <?php if (bdBool($e['renovacao_solicitada'])): ?>
                       <a class="btn primary small" href="?aprovar_renovacao=<?= (int) $e['id'] ?>">Aprovar renovação</a>
                       <a class="btn danger small" href="?recusar_renovacao=<?= (int) $e['id'] ?>">Recusar</a>
@@ -459,6 +519,14 @@ require __DIR__ . '/includes/layout_topo.php';
                       <button class="btn ghost small" disabled>Renovar</button>
                     <?php endif; ?>
                   <?php else: ?>
+                    <?php if (bdBool($e['devolucao_solicitada'])): ?>
+                      <button class="btn ghost small" disabled>Devolução aguardando confirmação</button>
+                    <?php else: ?>
+                      <a class="btn primary small" href="?avisar_devolucao=<?= (int) $e['id'] ?>"
+                         data-confirmar="Avisar a biblioteca que você devolveu &quot;<?= e($e['livro_titulo']) ?>&quot;? O empréstimo só é encerrado depois que a biblioteca confirmar o recebimento."
+                         data-confirmar-titulo="Devolver livro"
+                         data-confirmar-botao="Avisar devolução">Devolver</a>
+                    <?php endif; ?>
                     <?php if (bdBool($e['renovacao_solicitada'])): ?>
                       <button class="btn ghost small" disabled>Aguardando aprovação</button>
                     <?php elseif ($podeRenovar): ?>
