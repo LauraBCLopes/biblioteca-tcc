@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($titulo === '' || $autor === '' || $categoriaId <= 0 || $exemplaresTotal < 1) {
         flash('Preencha corretamente todos os campos obrigatórios.', 'erro');
-        header('Location: livros.php' . ($id ? "?editar=$id" : ''));
+        header('Location: livros.php' . ($id ? "?editar=$id" : '?novo=1'));
         exit;
     }
 
@@ -112,6 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         flash('Livro atualizado com sucesso.');
+        header("Location: livros.php?ver=$id");
+        exit;
     } else {
         // ---------- CADASTRO ----------
         $codigo = gerarCodigo($pdo, $categoriaId);
@@ -295,8 +297,11 @@ if ($verId) {
 // --- categorias (usadas no formulário e nos filtros) ---
 $categorias = $pdo->query('SELECT id, nome, slug FROM categorias ORDER BY nome')->fetchAll();
 
+// ?novo=1 (cadastrar) ou ?editar=ID (editar) mostram só o formulário — só admin
+$telaFormulario = isAdmin() && (!empty($_GET['novo']) || !empty($_GET['editar']));
+
 $livros = [];
-if (!$verId) {
+if (!$verId && !$telaFormulario) {
     // --- filtros vindos da URL ---
     $busca             = trim($_GET['busca'] ?? '');
     $categoriaSlug     = $_GET['categoria'] ?? 'todas';
@@ -311,8 +316,9 @@ if (!$verId) {
     $params = [];
 
     if ($busca !== '') {
-        $sql .= ' AND (l.titulo LIKE :busca OR l.autor LIKE :busca)';
-        $params['busca'] = '%' . $busca . '%';
+        // placeholders distintos: com EMULATE_PREPARES desligado o mesmo nome não pode se repetir
+        $sql .= ' AND (l.titulo LIKE :busca_titulo OR l.autor LIKE :busca_autor)';
+        $params['busca_titulo'] = $params['busca_autor'] = '%' . $busca . '%';
     }
     if ($categoriaSlug !== 'todas') {
         $sql .= ' AND c.slug = :slug';
@@ -341,9 +347,14 @@ if (isAdmin() && !empty($_GET['editar'])) {
     $stmt = $pdo->prepare('SELECT * FROM livros WHERE id = :id');
     $stmt->execute(['id' => (int) $_GET['editar']]);
     $livroEditando = $stmt->fetch();
+    if (!$livroEditando) {
+        flash('Livro não encontrado.', 'erro');
+        header('Location: livros.php');
+        exit;
+    }
 }
 
-$tituloAba = $verId ? 'Detalhes do livro' : 'Acervo';
+$tituloAba = $verId ? 'Detalhes do livro' : ($livroEditando ? 'Editar livro' : ($telaFormulario ? 'Adicionar livro' : 'Acervo'));
 $paginaAtual = 'livros';
 require __DIR__ . '/includes/layout_topo.php';
 ?>
@@ -424,21 +435,24 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
     </div>
 
-    <?php else: ?>
+    <?php elseif ($telaFormulario): ?>
 
     <div class="view-head">
       <div>
-        <div class="eyebrow">Livros</div>
-        <h2>Catálogo de livros</h2>
-        <p class="text-muted" style="margin-top:6px;font-size:13.5px;">Explore nosso acervo e encontre sua próxima leitura.</p>
+        <div class="eyebrow">
+          <?php if ($livroEditando): ?>
+            <a href="livros.php?ver=<?= (int) $livroEditando['id'] ?>">← Voltar ao livro</a>
+          <?php else: ?>
+            <a href="livros.php">← Voltar ao catálogo</a>
+          <?php endif; ?>
+        </div>
+        <h2><?= $livroEditando ? 'Editar livro' : 'Adicionar livro' ?></h2>
       </div>
-      <div class="mono text-muted" style="font-size:12.5px;"><?= count($livros) ?> título(s) encontrado(s)</div>
     </div>
 
-    <?php if (isAdmin()): ?>
     <div class="form-panel">
       <h3 style="margin-bottom:16px;">
-        <?= $livroEditando ? 'Editar livro' : 'Cadastrar novo livro' ?>
+        <?= $livroEditando ? e($livroEditando['titulo']) : 'Dados do novo livro' ?>
       </h3>
       <form method="post" action="livros.php">
         <?php if ($livroEditando): ?>
@@ -503,9 +517,7 @@ require __DIR__ . '/includes/layout_topo.php';
 
         <div style="margin-top:16px; display:flex; gap:10px;">
           <button class="btn primary" type="submit"><?= $livroEditando ? 'Salvar alterações' : 'Adicionar ao acervo' ?></button>
-          <?php if ($livroEditando): ?>
-            <a href="livros.php" class="btn ghost">Cancelar edição</a>
-          <?php endif; ?>
+          <a href="<?= $livroEditando ? 'livros.php?ver=' . (int) $livroEditando['id'] : 'livros.php' ?>" class="btn ghost">Cancelar</a>
         </div>
         <?php if ($livroEditando): ?>
           <div class="hint" style="text-align:left;margin-top:12px;">
@@ -515,7 +527,22 @@ require __DIR__ . '/includes/layout_topo.php';
         <?php endif; ?>
       </form>
     </div>
-    <?php endif; ?>
+
+    <?php else: ?>
+
+    <div class="view-head">
+      <div>
+        <div class="eyebrow">Livros</div>
+        <h2>Catálogo de livros</h2>
+        <p class="text-muted" style="margin-top:6px;font-size:13.5px;">Explore nosso acervo e encontre sua próxima leitura.</p>
+      </div>
+      <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+        <span class="mono text-muted" style="font-size:12.5px;"><?= count($livros) ?> título(s) encontrado(s)</span>
+        <?php if (isAdmin()): ?>
+          <a href="livros.php?novo=1" class="btn primary">+ Adicionar livro</a>
+        <?php endif; ?>
+      </div>
+    </div>
 
     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
       <form method="get" style="display:contents;">

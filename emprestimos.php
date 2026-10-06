@@ -383,6 +383,37 @@ $emprestimos = $filtro === 'todos'
         return $e['situacao'] === $filtro;
     }));
 
+// --- abas do aluno: empréstimos atuais, histórico (devolvidos) e reservas ---
+$ABAS_ALUNO = ['emprestimos' => 'Empréstimos', 'historico' => 'Histórico', 'reservas' => 'Reservas'];
+$aba = 'emprestimos';
+$minhasReservas = [];
+if (!isAdmin()) {
+    $aba = isset($ABAS_ALUNO[$_GET['aba'] ?? '']) ? $_GET['aba'] : 'emprestimos';
+
+    $emprestimos = array_values(array_filter($todos, function ($e) use ($aba) {
+        return $aba === 'historico' ? $e['status'] === 'devolvido' : $e['status'] !== 'devolvido';
+    }));
+    if ($aba === 'historico') {
+        // devolvidos mais recentes primeiro
+        usort($emprestimos, function ($a, $b) {
+            return [$b['data_devolucao'], $b['id']] <=> [$a['data_devolucao'], $a['id']];
+        });
+    }
+
+    // posição na fila = quantas reservas pendentes do mesmo livro chegaram antes (ou é esta)
+    $stmt = $pdo->prepare("SELECT res.*, l.titulo AS livro_titulo, l.exemplares_disponiveis,
+            (SELECT COUNT(*) FROM reservas r2
+              WHERE r2.livro_id = res.livro_id AND r2.status = 'pendente'
+                AND (r2.data_reserva < res.data_reserva
+                     OR (r2.data_reserva = res.data_reserva AND r2.id <= res.id))) AS posicao
+        FROM reservas res
+        JOIN livros l ON l.id = res.livro_id
+        WHERE res.leitor_id = :leitor_id
+        ORDER BY CASE WHEN res.status = 'pendente' THEN 0 ELSE 1 END, res.data_reserva DESC, res.id DESC");
+    $stmt->execute(['leitor_id' => $usuario['id']]);
+    $minhasReservas = $stmt->fetchAll();
+}
+
 $emCirculacao = count(array_filter($todos, function ($e) {
     return $e['status'] !== 'devolvido';
 }));
@@ -466,36 +497,97 @@ require __DIR__ . '/includes/layout_topo.php';
     <?php endif; ?>
 
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
-      <?php
-      $abas = ['todos' => 'Todos', 'ativo' => 'Em dia', 'aviso' => 'Vencendo', 'atrasado' => 'Atrasados', 'devolvido' => 'Devolvidos'];
-      foreach ($abas as $slug => $label): ?>
-        <a href="?status=<?= $slug ?>" class="btn <?= $filtro === $slug ? 'primary' : 'ghost' ?> small"><?= $label ?></a>
-      <?php endforeach; ?>
+      <?php if (isAdmin()): ?>
+        <?php
+        $abas = ['todos' => 'Todos', 'ativo' => 'Em dia', 'aviso' => 'Vencendo', 'atrasado' => 'Atrasados', 'devolvido' => 'Devolvidos'];
+        foreach ($abas as $slug => $label): ?>
+          <a href="?status=<?= $slug ?>" class="btn <?= $filtro === $slug ? 'primary' : 'ghost' ?> small"><?= $label ?></a>
+        <?php endforeach; ?>
+      <?php else: ?>
+        <?php foreach ($ABAS_ALUNO as $slug => $label): ?>
+          <a href="?aba=<?= $slug ?>" class="btn <?= $aba === $slug ? 'primary' : 'ghost' ?> small"><?= $label ?></a>
+        <?php endforeach; ?>
+      <?php endif; ?>
     </div>
+
+    <?php if ($aba === 'reservas'): ?>
+
+    <div class="table-wrap tabela-cartoes">
+      <table>
+        <thead>
+          <tr><th>Livro</th><th>Data da reserva</th><th>Fila</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody>
+          <?php if (!$minhasReservas): ?>
+            <tr><td colspan="5"><div style="padding:30px;text-align:center;color:var(--texto-secundario);">
+              Você não tem reservas. Para reservar, abra um livro em <a href="livros.php">Livros</a>.
+            </div></td></tr>
+          <?php else: foreach ($minhasReservas as $r): ?>
+            <tr>
+              <td><a href="livros.php?ver=<?= (int) $r['livro_id'] ?>"><strong><?= e($r['livro_titulo']) ?></strong></a></td>
+              <td class="mono"><?= date('d/m/Y', strtotime($r['data_reserva'])) ?></td>
+              <td class="mono"><?= $r['status'] === 'pendente' ? (int) $r['posicao'] . 'º na fila' : '—' ?></td>
+              <td>
+                <?php if ($r['status'] === 'pendente'): ?>
+                  <span class="badge warn">Pendente</span>
+                  <?php if ((int) $r['exemplares_disponiveis'] > 0): ?><br><span class="badge ok">Exemplar disponível</span><?php endif; ?>
+                <?php elseif ($r['status'] === 'atendida'): ?>
+                  <span class="badge ok">Atendida</span>
+                <?php else: ?>
+                  <span class="badge muted">Cancelada</span>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php if ($r['status'] === 'pendente'): ?>
+                  <a class="btn danger small" href="reservas.php?cancelar=<?= (int) $r['id'] ?>&amp;voltar=emprestimos"
+                     data-confirmar="Cancelar a reserva de &quot;<?= e($r['livro_titulo']) ?>&quot;? Você sai da fila deste livro."
+                     data-confirmar-titulo="Cancelar reserva"
+                     data-confirmar-botao="Cancelar reserva">Cancelar</a>
+                <?php endif; ?>
+              </td>
+            </tr>
+          <?php endforeach; endif; ?>
+        </tbody>
+      </table>
+    </div>
+
+    <?php else: ?>
 
     <div class="table-wrap tabela-cartoes">
       <table>
         <thead>
           <tr>
-            <th>Livro</th><th>Leitor</th><th>Empréstimo</th><th>Devolução prevista</th>
+            <th>Livro</th><?php if (isAdmin()): ?><th>Leitor</th><?php endif; ?><th>Empréstimo</th>
+            <th><?= $aba === 'historico' ? 'Devolvido em' : 'Devolução prevista' ?></th>
             <th>Situação</th><th>Renovações</th><th>Ações</th>
           </tr>
         </thead>
         <tbody>
           <?php if (!$emprestimos): ?>
-            <tr><td colspan="7"><div style="padding:30px;text-align:center;color:var(--texto-secundario);">Nenhum empréstimo nesta visualização.</div></td></tr>
+            <tr><td colspan="<?= isAdmin() ? 7 : 6 ?>"><div style="padding:30px;text-align:center;color:var(--texto-secundario);">
+              <?= $aba === 'historico' ? 'Você ainda não devolveu nenhum livro.' : (isAdmin() ? 'Nenhum empréstimo nesta visualização.' : 'Você não está com nenhum livro emprestado.') ?>
+            </div></td></tr>
           <?php else: foreach ($emprestimos as $e):
               $sl = $SITUACAO_LABEL[$e['situacao']];
               $podeRenovar = !in_array($e['situacao'], ['atrasado', 'devolvido']) && (int) $e['renovacoes'] < 2;
           ?>
             <tr id="emprestimo-<?= (int) $e['id'] ?>">
               <td><strong><?= e($e['livro_titulo']) ?></strong><br><span class="mono" style="color:var(--texto-secundario);font-size:11.5px;"><?= e($e['livro_codigo']) ?></span></td>
+              <?php if (isAdmin()): ?>
               <td>
                 <?= e($e['leitor_nome']) ?>
                 <?php if ($e['leitor_turma']): ?><br><span class="text-muted" style="font-size:12px;">Sala <?= e($e['leitor_turma']) ?></span><?php endif; ?>
               </td>
+              <?php endif; ?>
               <td class="mono"><?= date('d/m/Y', strtotime($e['data_emprestimo'])) ?></td>
-              <td class="mono"><?= date('d/m/Y', strtotime($e['data_prevista'])) ?></td>
+              <td class="mono">
+                <?php if ($aba === 'historico'): ?>
+                  <?= date('d/m/Y', strtotime($e['data_devolucao'])) ?>
+                  <?php if ($e['data_devolucao'] > $e['data_prevista']): ?><br><span class="badge alert">Com atraso</span><?php endif; ?>
+                <?php else: ?>
+                  <?= date('d/m/Y', strtotime($e['data_prevista'])) ?>
+                <?php endif; ?>
+              </td>
               <td>
                 <span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span>
                 <?php if ($e['status'] !== 'devolvido' && bdBool($e['devolucao_solicitada'])): ?>
@@ -550,5 +642,7 @@ require __DIR__ . '/includes/layout_topo.php';
         </tbody>
       </table>
     </div>
+
+    <?php endif; ?>
 
 <?php require __DIR__ . '/includes/layout_rodape.php'; ?>

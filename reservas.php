@@ -149,7 +149,7 @@ if (!empty($_GET['cancelar'])) {
     $stmt->execute(['id' => $idCancelar]);
 
     flash('Reserva cancelada.');
-    header('Location: reservas.php');
+    header('Location: ' . (($_GET['voltar'] ?? '') === 'emprestimos' ? 'emprestimos.php?aba=reservas' : 'reservas.php'));
     exit;
 }
 
