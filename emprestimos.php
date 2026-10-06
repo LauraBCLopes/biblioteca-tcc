@@ -63,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// Por quanto tempo depois de registrar a devolução ainda dá para desfazer (em segundos).
+const PRAZO_DESFAZER_DEVOLUCAO = 600;
+
 // ---------- devolver — só admin ----------
 if (!empty($_GET['devolver'])) {
     requireAdmin();
@@ -78,6 +81,10 @@ if (!empty($_GET['devolver'])) {
         header('Location: emprestimos.php');
         exit;
     }
+
+    $stmt = $pdo->prepare('SELECT status FROM leitores WHERE id = :id');
+    $stmt->execute(['id' => $emprestimo['leitor_id']]);
+    $statusLeitorAntes = $stmt->fetchColumn();
 
     $pdo->beginTransaction();
     try {
@@ -102,15 +109,78 @@ if (!empty($_GET['devolver'])) {
 
         $pdo->commit();
 
+        // Guarda como estava antes, para o botão "Desfazer"
+        $_SESSION['ultima_devolucao'] = [
+            'id'            => $idDevolver,
+            'status'        => $emprestimo['status'],
+            'leitor_status' => $statusLeitorAntes,
+            'em'            => time(),
+        ];
+        $acaoDesfazer = ['texto' => 'Desfazer', 'url' => 'emprestimos.php?desfazer_devolucao=' . $idDevolver];
+
         // Avisa se há reserva pendente para este título (atendida manualmente em reservas.php)
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservas WHERE livro_id = :livro_id AND status = 'pendente'");
         $stmt->execute(['livro_id' => $emprestimo['livro_id']]);
         $temReserva = $stmt->fetchColumn() > 0;
 
-        flash('Devolução registrada.' . ($temReserva ? ' Há uma reserva pendente para este título.' : ''), $temReserva ? 'erro' : 'ok');
+        flash('Devolução registrada.' . ($temReserva ? ' Há uma reserva pendente para este título.' : ''), $temReserva ? 'erro' : 'ok', $acaoDesfazer);
     } catch (Throwable $ex) {
         $pdo->rollBack();
         flash('Não foi possível registrar a devolução: ' . $ex->getMessage(), 'erro');
+    }
+
+    header('Location: emprestimos.php');
+    exit;
+}
+
+// ---------- desfazer a última devolução — só admin ----------
+if (!empty($_GET['desfazer_devolucao'])) {
+    requireAdmin();
+
+    $idDesfazer = (int) $_GET['desfazer_devolucao'];
+    $ultima = $_SESSION['ultima_devolucao'] ?? null;
+    unset($_SESSION['ultima_devolucao']);
+
+    if (!$ultima || (int) $ultima['id'] !== $idDesfazer || time() - $ultima['em'] > PRAZO_DESFAZER_DEVOLUCAO) {
+        flash('Não há devolução recente para desfazer.', 'erro');
+        header('Location: emprestimos.php');
+        exit;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare('SELECT * FROM emprestimos WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $idDesfazer]);
+        $emprestimo = $stmt->fetch();
+        if (!$emprestimo || $emprestimo['status'] !== 'devolvido') {
+            throw new RuntimeException('Este empréstimo não está mais como devolvido.');
+        }
+
+        // o exemplar devolvido pode já ter sido emprestado para outra pessoa
+        $stmt = $pdo->prepare('SELECT exemplares_disponiveis FROM livros WHERE id = :id FOR UPDATE');
+        $stmt->execute(['id' => $emprestimo['livro_id']]);
+        if ((int) $stmt->fetchColumn() <= 0) {
+            throw new RuntimeException('Não dá para desfazer: o exemplar devolvido já foi emprestado novamente.');
+        }
+
+        $stmt = $pdo->prepare('UPDATE emprestimos SET status = :status, data_devolucao = NULL WHERE id = :id');
+        $stmt->execute(['status' => $ultima['status'], 'id' => $idDesfazer]);
+
+        $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
+        $stmt->execute(['id' => $emprestimo['livro_id']]);
+
+        // se a devolução tinha desbloqueado o leitor, volta a bloquear
+        if ($ultima['leitor_status'] === 'bloqueado') {
+            $stmt = $pdo->prepare("UPDATE leitores SET status = 'bloqueado' WHERE id = :id");
+            $stmt->execute(['id' => $emprestimo['leitor_id']]);
+        }
+
+        $pdo->commit();
+        flash('Devolução desfeita: o empréstimo voltou a ficar em aberto.');
+    } catch (Throwable $ex) {
+        $pdo->rollBack();
+        flash($ex->getMessage(), 'erro');
     }
 
     header('Location: emprestimos.php');
@@ -223,7 +293,7 @@ if (!empty($_GET['aprovar_renovacao']) || !empty($_GET['recusar_renovacao'])) {
 $filtro = $_GET['status'] ?? 'todos';
 
 $sql = "SELECT e.*, l.titulo AS livro_titulo, l.codigo AS livro_codigo,
-               r.nome AS leitor_nome
+               r.nome AS leitor_nome, r.turma AS leitor_turma
         FROM emprestimos e
         JOIN livros l    ON l.id = e.livro_id
         JOIN leitores r  ON r.id = e.leitor_id";
@@ -270,7 +340,7 @@ if (isAdmin()) {
         "SELECT id, titulo, exemplares_disponiveis FROM livros WHERE exemplares_disponiveis > 0 ORDER BY titulo"
     )->fetchAll();
     $leitoresAtivos = $pdo->query(
-        "SELECT id, nome FROM leitores WHERE status = 'ativo' ORDER BY nome"
+        "SELECT id, nome, turma FROM leitores WHERE status = 'ativo' ORDER BY nome"
     )->fetchAll();
 }
 
@@ -320,7 +390,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php else: ?>
                 <option value="">Selecione</option>
                 <?php foreach ($leitoresAtivos as $u): ?>
-                  <option value="<?= $u['id'] ?>"><?= e($u['nome']) ?></option>
+                  <option value="<?= $u['id'] ?>"><?= e($u['nome']) ?><?= $u['turma'] ? ' — ' . e($u['turma']) : '' ?></option>
                 <?php endforeach; ?>
               <?php endif; ?>
             </select>
@@ -363,9 +433,12 @@ require __DIR__ . '/includes/layout_topo.php';
               $sl = $SITUACAO_LABEL[$e['situacao']];
               $podeRenovar = !in_array($e['situacao'], ['atrasado', 'devolvido']) && (int) $e['renovacoes'] < 2;
           ?>
-            <tr>
+            <tr id="emprestimo-<?= (int) $e['id'] ?>">
               <td><strong><?= e($e['livro_titulo']) ?></strong><br><span class="mono" style="color:var(--texto-secundario);font-size:11.5px;"><?= e($e['livro_codigo']) ?></span></td>
-              <td><?= e($e['leitor_nome']) ?></td>
+              <td>
+                <?= e($e['leitor_nome']) ?>
+                <?php if ($e['leitor_turma']): ?><br><span class="text-muted" style="font-size:12px;">Sala <?= e($e['leitor_turma']) ?></span><?php endif; ?>
+              </td>
               <td class="mono"><?= date('d/m/Y', strtotime($e['data_emprestimo'])) ?></td>
               <td class="mono"><?= date('d/m/Y', strtotime($e['data_prevista'])) ?></td>
               <td><span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span></td>

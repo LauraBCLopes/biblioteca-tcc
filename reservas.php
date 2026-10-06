@@ -156,7 +156,7 @@ if (!empty($_GET['cancelar'])) {
 // ---------- listagem ----------
 $filtro = $_GET['status'] ?? 'pendente';
 
-$sql = "SELECT res.*, l.titulo AS livro_titulo, l.exemplares_disponiveis, r.nome AS leitor_nome, r.status AS leitor_status
+$sql = "SELECT res.*, l.titulo AS livro_titulo, l.exemplares_disponiveis, r.nome AS leitor_nome, r.turma AS leitor_turma, r.status AS leitor_status
         FROM reservas res
         JOIN livros l   ON l.id = res.livro_id
         JOIN leitores r ON r.id = res.leitor_id
@@ -302,6 +302,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php if (isAdmin()): ?>
               <td>
                 <?= e($r['leitor_nome']) ?>
+                <?php if ($r['leitor_turma']): ?><br><span class="text-muted" style="font-size:12px;">Sala <?= e($r['leitor_turma']) ?></span><?php endif; ?>
                 <?php if ($r['status'] === 'pendente' && $r['leitor_status'] !== 'ativo'): ?>
                   <br><span class="badge alert">Leitor bloqueado</span>
                 <?php endif; ?>

@@ -44,6 +44,7 @@ CREATE TABLE leitores (
   email           VARCHAR(150) NOT NULL UNIQUE,
   telefone        VARCHAR(30),
   matricula       VARCHAR(30) NULL,
+  turma           VARCHAR(30) NULL,          -- sala/série do aluno, ex: 8º ano B
   senha_hash      VARCHAR(255) NULL,        -- preenchido quando o aluno cria sua senha em cadastro.php
   status          ENUM('ativo', 'bloqueado') NOT NULL DEFAULT 'ativo',
   data_cadastro   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -12,6 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario   = trim($_POST['usuario'] ?? '');
     $telefone  = trim($_POST['telefone'] ?? '');
     $matricula = trim($_POST['matricula'] ?? '');
+    $turma     = trim($_POST['turma'] ?? '');
     $email     = montarEmailComDominio($usuario, 'aluno.com.br');
 
     if ($nome === '' || $usuario === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -30,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($id) {
-        $stmt = $pdo->prepare('UPDATE leitores SET nome = :nome, email = :email, telefone = :telefone, matricula = :matricula WHERE id = :id');
-        $stmt->execute(['nome' => $nome, 'email' => $email, 'telefone' => $telefone, 'matricula' => $matricula ?: null, 'id' => $id]);
+        $stmt = $pdo->prepare('UPDATE leitores SET nome = :nome, email = :email, telefone = :telefone, matricula = :matricula, turma = :turma WHERE id = :id');
+        $stmt->execute(['nome' => $nome, 'email' => $email, 'telefone' => $telefone, 'matricula' => $matricula ?: null, 'turma' => $turma ?: null, 'id' => $id]);
         flash('Leitor atualizado com sucesso.');
     } else {
-        $stmt = $pdo->prepare('INSERT INTO leitores (nome, email, telefone, matricula) VALUES (:nome, :email, :telefone, :matricula)');
-        $stmt->execute(['nome' => $nome, 'email' => $email, 'telefone' => $telefone, 'matricula' => $matricula ?: null]);
+        $stmt = $pdo->prepare('INSERT INTO leitores (nome, email, telefone, matricula, turma) VALUES (:nome, :email, :telefone, :matricula, :turma)');
+        $stmt->execute(['nome' => $nome, 'email' => $email, 'telefone' => $telefone, 'matricula' => $matricula ?: null, 'turma' => $turma ?: null]);
         flash('Leitor cadastrado com sucesso.');
     }
 
@@ -138,8 +139,9 @@ $sql = "SELECT l.*,
 $params = ['hoje' => $hoje, 'em_tres_dias' => $emTresDias];
 
 if ($busca !== '') {
-    $sql .= ' AND (l.nome LIKE :busca OR l.email LIKE :busca)';
-    $params['busca'] = '%' . $busca . '%';
+    // placeholders distintos: com EMULATE_PREPARES desligado o mesmo nome não pode se repetir
+    $sql .= ' AND (l.nome LIKE :busca_nome OR l.email LIKE :busca_email OR l.turma LIKE :busca_turma)';
+    $params['busca_nome'] = $params['busca_email'] = $params['busca_turma'] = '%' . $busca . '%';
 }
 $sql .= ' ORDER BY l.nome';
 
@@ -202,6 +204,11 @@ require __DIR__ . '/includes/layout_topo.php';
             <input name="matricula" placeholder="Ex: 2026001234"
                    value="<?= e($leitorEditando['matricula'] ?? '') ?>">
           </div>
+          <div class="field">
+            <label>Sala / série</label>
+            <input name="turma" placeholder="Ex: 8º ano B" maxlength="30"
+                   value="<?= e($leitorEditando['turma'] ?? '') ?>">
+          </div>
         </div>
 
         <div style="margin-top:16px; display:flex; gap:10px;">
@@ -216,7 +223,7 @@ require __DIR__ . '/includes/layout_topo.php';
     <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; align-items:center;">
       <form method="get" style="display:contents;">
         <input type="search" name="busca" value="<?= e($busca) ?>"
-               placeholder="Buscar por nome ou e-mail…"
+               placeholder="Buscar por nome, e-mail ou sala…"
                style="border:1px solid var(--linha);background:var(--branco);padding:9px 13px;border-radius:var(--radius-sm);font-size:13px;min-width:220px;">
         <button class="btn ghost small" type="submit">Buscar</button>
         <?php if ($busca !== ''): ?><a href="leitores.php" class="btn ghost small">Limpar</a><?php endif; ?>
@@ -241,8 +248,11 @@ require __DIR__ . '/includes/layout_topo.php';
               <td>
                 <span class="avatar-init sm"><?= e(iniciaisNome($u['nome'])) ?></span>
                 <strong><?= e($u['nome']) ?></strong>
-                <?php if ($u['matricula']): ?>
-                  <br><span class="text-muted mono" style="font-size:11px;margin-left:44px;">Matrícula <?= e($u['matricula']) ?></span>
+                <?php if ($u['turma'] || $u['matricula']): ?>
+                  <br><span class="text-muted mono" style="font-size:11px;margin-left:44px;"><?= e(implode(' · ', array_filter([
+                      $u['turma'] ? 'Sala ' . $u['turma'] : '',
+                      $u['matricula'] ? 'Matrícula ' . $u['matricula'] : '',
+                  ]))) ?></span>
                 <?php endif; ?>
               </td>
               <td><?= e($u['email']) ?><br><span class="text-muted" style="font-size:12px;"><?= e($u['telefone'] ?: '—') ?></span></td>

@@ -22,14 +22,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nome           = trim($_POST['nome'] ?? '');
     $usuario        = trim($_POST['usuario'] ?? '');
     $telefone       = trim($_POST['telefone'] ?? '');
+    $turma          = trim($_POST['turma'] ?? '');
     $senha          = $_POST['senha'] ?? '';
     $confirmarSenha = $_POST['confirmar_senha'] ?? '';
 
     $email = montarEmailComDominio($usuario, 'aluno.com.br');
-    $valoresDigitados = ['nome' => $nome, 'usuario' => $usuario, 'telefone' => $telefone];
+    $valoresDigitados = ['nome' => $nome, 'usuario' => $usuario, 'telefone' => $telefone, 'turma' => $turma];
 
     if ($nome === '' || $usuario === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         voltarComErro('Preencha o nome e um usuário/e-mail válido.', $valoresDigitados);
+    }
+    if ($turma === '') {
+        voltarComErro('Informe a sua sala/série (ex: 8º ano B).', $valoresDigitados);
     }
     if (mb_strlen($senha) < 6) {
         voltarComErro('A senha precisa ter pelo menos 6 caracteres.', $valoresDigitados);
@@ -59,20 +63,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // a biblioteca já tinha cadastrado este leitor manualmente, sem senha —
         // este cadastro apenas "assume" a conta, criando o acesso ao sistema.
-        $stmt = $pdo->prepare('UPDATE leitores SET nome = :nome, telefone = :telefone, senha_hash = :hash WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE leitores SET nome = :nome, telefone = :telefone, turma = :turma, senha_hash = :hash WHERE id = :id');
         $stmt->execute([
             'nome'     => $nome,
             'telefone' => $telefone,
+            'turma'    => $turma,
             'hash'     => $hash,
             'id'       => $leitorExistente['id'],
         ]);
     } else {
-        $stmt = $pdo->prepare('INSERT INTO leitores (nome, email, telefone, senha_hash)
-            VALUES (:nome, :email, :telefone, :hash)');
+        $stmt = $pdo->prepare('INSERT INTO leitores (nome, email, telefone, turma, senha_hash)
+            VALUES (:nome, :email, :telefone, :turma, :hash)');
         $stmt->execute([
             'nome'     => $nome,
             'email'    => $email,
             'telefone' => $telefone,
+            'turma'    => $turma,
             'hash'     => $hash,
         ]);
     }
@@ -122,6 +128,11 @@ unset($_SESSION['cadastro_valores']);
                      autocapitalize="off" autocorrect="off" value="<?= e($valores['usuario'] ?? '') ?>">
               <span class="login-suffix">@aluno.com.br</span>
             </div>
+          </div>
+          <div class="field">
+            <label for="turma">Sala / série</label>
+            <input type="text" id="turma" name="turma" required maxlength="30" placeholder="Ex: 8º ano B"
+                   value="<?= e($valores['turma'] ?? '') ?>">
           </div>
           <div class="field">
             <label for="telefone">Telefone (opcional)</label>

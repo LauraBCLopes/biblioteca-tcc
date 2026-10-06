@@ -110,6 +110,11 @@ login. Alunos não precisam desse passo: eles criam a própria conta em
 > `sql/migracao_etapa6_renovacao_supabase.sql`. Quem for importar o schema do
 > zero não precisa desse passo.
 
+> Se o banco já existia **antes** do campo de sala/série do aluno, rode
+> também `sql/migracao_turma.sql` — adiciona a coluna `turma` em
+> `leitores`. No Supabase, use `sql/migracao_turma_supabase.sql`. Quem for
+> importar o schema do zero não precisa desse passo.
+
 ### 5. Rodar o projeto
 Se estiver usando XAMPP/Laragon, inicie o Apache e acesse:
 ```
