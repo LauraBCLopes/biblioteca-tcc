@@ -595,17 +595,34 @@ tbody tr:hover{ background: var(--fundo); }
 /* ---------- Cursor "blurry dot" (montado pelo interface.js) ----------
    Só em computador com mouse. A classe .cursor-proprio no <html> esconde a
    seta do navegador; se o JS não rodar, o cursor normal continua.
-   Um círculo só, com o centro na cor mais forte, desbotando para as bordas. */
+   Um círculo só: núcleo claro (efeito neon), roxo forte em volta e um
+   degradê longo e suave até sumir, com um halo discreto por fora. */
 .cursor-proprio, .cursor-proprio *{ cursor:none !important; }
 .cursor-borrao{
   position:fixed; left:0; top:0; z-index:2147483647; pointer-events:none;
-  width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%;
-  background: radial-gradient(circle, var(--roxo) 0%, var(--roxo) 22%, var(--azul) 48%, transparent 72%);
-  filter: blur(3px) saturate(1.4);
+  width:30px; height:30px; margin:-15px 0 0 -15px; border-radius:50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--roxo-claro) 55%, #fff) 0%,
+    var(--roxo-claro) 12%,
+    var(--roxo) 26%,
+    color-mix(in srgb, var(--roxo) 60%, var(--azul)) 40%,
+    color-mix(in srgb, var(--azul) 45%, transparent) 56%,
+    color-mix(in srgb, var(--azul) 15%, transparent) 70%,
+    transparent 82%);
+  box-shadow:
+    0 0 10px 1px color-mix(in srgb, var(--roxo) 30%, transparent),
+    0 0 24px 6px color-mix(in srgb, var(--azul) 14%, transparent);
+  filter: blur(1.5px);
   opacity:0; will-change: transform;
-  transition: opacity .2s ease, width .25s ease, height .25s ease, margin .25s ease;
+  transition: opacity .3s ease, width .35s ease, height .35s ease, margin .35s ease, box-shadow .35s ease;
 }
-.cursor-visivel .cursor-borrao{ opacity:.95; }
-/* sobre links e botões o círculo cresce; ao clicar, se contrai */
-.cursor-sobre-link .cursor-borrao{ width:50px; height:50px; margin:-25px 0 0 -25px; }
-.cursor-pressionado .cursor-borrao{ width:24px; height:24px; margin:-12px 0 0 -12px; }
+.cursor-visivel .cursor-borrao{ opacity:.9; }
+/* sobre links e botões o círculo cresce e o brilho fica um pouco mais vivo;
+   ao clicar, se contrai */
+.cursor-sobre-link .cursor-borrao{
+  width:42px; height:42px; margin:-21px 0 0 -21px;
+  box-shadow:
+    0 0 12px 2px color-mix(in srgb, var(--roxo) 38%, transparent),
+    0 0 30px 8px color-mix(in srgb, var(--azul) 18%, transparent);
+}
+.cursor-pressionado .cursor-borrao{ width:22px; height:22px; margin:-11px 0 0 -11px; }
