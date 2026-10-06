@@ -205,6 +205,60 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Cursor "blurry dot": um ponto que segue o mouse na hora e um brilho
+  // desfocado que vem atrás, suavizado. Só em aparelho com mouse (no celular
+  // não existe cursor) e respeitando quem pediu menos animação no sistema.
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    var raizCursor = document.documentElement;
+    var ponto = document.createElement('div');
+    var borrao = document.createElement('div');
+    ponto.className = 'cursor-ponto';
+    borrao.className = 'cursor-borrao';
+    ponto.setAttribute('aria-hidden', 'true');
+    borrao.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(borrao);
+    document.body.appendChild(ponto);
+    raizCursor.classList.add('cursor-proprio');
+
+    var mouseX = -100, mouseY = -100, borraoX = -100, borraoY = -100;
+    var SELETOR_CLICAVEL = 'a, button, label, select, summary, [role="button"], input[type="checkbox"], input[type="radio"], input[type="submit"]';
+
+    document.addEventListener('mousemove', function (evento) {
+      mouseX = evento.clientX;
+      mouseY = evento.clientY;
+      if (!raizCursor.classList.contains('cursor-visivel')) {
+        borraoX = mouseX;
+        borraoY = mouseY;
+        raizCursor.classList.add('cursor-visivel');
+      }
+      raizCursor.classList.toggle('cursor-sobre-link', !!evento.target.closest(SELETOR_CLICAVEL));
+    });
+    document.documentElement.addEventListener('mouseleave', function () {
+      raizCursor.classList.remove('cursor-visivel');
+    });
+    document.addEventListener('mousedown', function () { raizCursor.classList.add('cursor-pressionado'); });
+    document.addEventListener('mouseup', function () { raizCursor.classList.remove('cursor-pressionado'); });
+
+    (function animar() {
+      // Um <dialog> aberto fica numa camada acima de tudo; o cursor vai para
+      // dentro dele para não sumir atrás da janela de confirmação.
+      // (espera a animação de entrada acabar: durante ela o transform do
+      // dialog deslocaria o cursor)
+      var destino = document.querySelector('dialog[open]') || document.body;
+      var animando = destino.getAnimations && destino.getAnimations().length > 0;
+      if (ponto.parentNode !== destino && !animando) {
+        destino.appendChild(borrao);
+        destino.appendChild(ponto);
+      }
+      borraoX += (mouseX - borraoX) * 0.18;
+      borraoY += (mouseY - borraoY) * 0.18;
+      ponto.style.transform = 'translate3d(' + mouseX + 'px,' + mouseY + 'px,0)';
+      borrao.style.transform = 'translate3d(' + borraoX + 'px,' + borraoY + 'px,0)';
+      window.requestAnimationFrame(animar);
+    })();
+  }
+
   // Configurações → Aparência: aplica o tema na hora (sem esperar o servidor)
   // e envia o formulário para o PHP gravar a escolha no cookie.
   var formTema = document.getElementById('form-tema');
