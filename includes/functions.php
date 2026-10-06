@@ -4,7 +4,7 @@
  * Troque este valor sempre que mudar o CSS ou o JS: assim o navegador
  * (principalmente no celular) baixa o arquivo novo em vez de usar o antigo.
  */
-const VERSAO_ASSETS = '2026-10-06h';
+const VERSAO_ASSETS = '2026-10-06j';
 
 /**
  * Funções auxiliares usadas em várias páginas do sistema.
