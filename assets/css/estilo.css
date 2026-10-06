@@ -109,27 +109,31 @@ a{ color: var(--roxo); text-decoration:none; }
   padding: 48px 20px;
   background:
     linear-gradient(var(--auth-veu), var(--auth-veu)),
-    radial-gradient(circle at var(--luz1-x) var(--luz1-y), rgba(172,160,255,0.6), transparent 40%),
-    radial-gradient(circle at var(--luz2-x) var(--luz2-y), rgba(110,170,255,0.55), transparent 42%),
-    radial-gradient(circle at var(--luz3-x) var(--luz3-y), rgba(52,40,170,0.5), transparent 40%),
+    radial-gradient(circle at var(--luz1-x) var(--luz1-y), rgba(178,166,255,0.7), transparent var(--luz1-r)),
+    radial-gradient(circle at var(--luz2-x) var(--luz2-y), rgba(110,175,255,0.65), transparent var(--luz2-r)),
+    radial-gradient(circle at var(--luz3-x) var(--luz3-y), rgba(48,36,160,0.55), transparent var(--luz3-r)),
     var(--gradiente);
-  animation: auth-luzes 14s ease-in-out infinite alternate;
+  animation: auth-luzes 9s ease-in-out infinite alternate;
 }
-/* Movimento de cores do fundo: três manchas de luz (roxo claro, azul, roxo)
-   oscilam devagar em volta do próprio lugar — o degradê continua roxo à
-   esquerda e azul à direita, só "respira". @property deixa o navegador
-   animar as posições; sem suporte, o fundo fica parado como antes. */
-@property --luz1-x{ syntax:'<percentage>'; inherits:false; initial-value:15%; }
-@property --luz1-y{ syntax:'<percentage>'; inherits:false; initial-value:20%; }
-@property --luz2-x{ syntax:'<percentage>'; inherits:false; initial-value:85%; }
+/* Movimento de cores do fundo: três manchas de luz (lilás, azul claro e
+   anil) andam, crescem e encolhem em volta do próprio lugar — o degradê
+   continua roxo à esquerda e azul à direita, só "respira". @property deixa
+   o navegador animar esses valores; sem suporte, o fundo fica parado. */
+@property --luz1-x{ syntax:'<percentage>'; inherits:false; initial-value:12%; }
+@property --luz1-y{ syntax:'<percentage>'; inherits:false; initial-value:18%; }
+@property --luz1-r{ syntax:'<percentage>'; inherits:false; initial-value:38%; }
+@property --luz2-x{ syntax:'<percentage>'; inherits:false; initial-value:88%; }
 @property --luz2-y{ syntax:'<percentage>'; inherits:false; initial-value:70%; }
-@property --luz3-x{ syntax:'<percentage>'; inherits:false; initial-value:48%; }
-@property --luz3-y{ syntax:'<percentage>'; inherits:false; initial-value:95%; }
+@property --luz2-r{ syntax:'<percentage>'; inherits:false; initial-value:40%; }
+@property --luz3-x{ syntax:'<percentage>'; inherits:false; initial-value:50%; }
+@property --luz3-y{ syntax:'<percentage>'; inherits:false; initial-value:100%; }
+@property --luz3-r{ syntax:'<percentage>'; inherits:false; initial-value:36%; }
 @keyframes auth-luzes{
-  0%  { --luz1-x:15%; --luz1-y:20%; --luz2-x:85%; --luz2-y:70%; --luz3-x:48%; --luz3-y:95%; }
-  33% { --luz1-x:30%; --luz1-y:34%; --luz2-x:72%; --luz2-y:56%; --luz3-x:34%; --luz3-y:80%; }
-  66% { --luz1-x:10%; --luz1-y:40%; --luz2-x:90%; --luz2-y:86%; --luz3-x:60%; --luz3-y:84%; }
-  100%{ --luz1-x:26%; --luz1-y:12%; --luz2-x:76%; --luz2-y:80%; --luz3-x:40%; --luz3-y:100%; }
+  0%  { --luz1-x:12%; --luz1-y:18%; --luz1-r:38%; --luz2-x:88%; --luz2-y:70%; --luz2-r:40%; --luz3-x:50%; --luz3-y:100%; --luz3-r:36%; }
+  25% { --luz1-x:32%; --luz1-y:30%; --luz1-r:50%; --luz2-x:74%; --luz2-y:52%; --luz2-r:32%; --luz3-x:30%; --luz3-y:82%; --luz3-r:46%; }
+  50% { --luz1-x:20%; --luz1-y:50%; --luz1-r:32%; --luz2-x:94%; --luz2-y:88%; --luz2-r:52%; --luz3-x:62%; --luz3-y:78%; --luz3-r:30%; }
+  75% { --luz1-x:6%;  --luz1-y:32%; --luz1-r:46%; --luz2-x:70%; --luz2-y:82%; --luz2-r:36%; --luz3-x:44%; --luz3-y:92%; --luz3-r:48%; }
+  100%{ --luz1-x:28%; --luz1-y:8%;  --luz1-r:40%; --luz2-x:84%; --luz2-y:60%; --luz2-r:46%; --luz3-x:56%; --luz3-y:104%; --luz3-r:38%; }
 }
 @media (prefers-reduced-motion: reduce){ .auth-page{ animation:none; } }
 .auth-page::before{
