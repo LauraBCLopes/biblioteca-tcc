@@ -205,8 +205,10 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Cursor "blurry dot": um círculo desfocado, mais forte no centro, que
-  // segue o mouse com um leve atraso. Só em aparelho com mouse (no celular
+  // Cursor "blurry dot" com movimento fluido: um círculo desfocado, mais forte
+  // no centro, que segue o mouse como se estivesse preso a uma mola e se
+  // estica na direção do movimento (como uma gota), voltando a ficar redondo
+  // quando para. Só em aparelho com mouse (no celular
   // não existe cursor) e respeitando quem pediu menos animação no sistema.
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
       !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -218,6 +220,8 @@ document.addEventListener('DOMContentLoaded', function () {
     raizCursor.classList.add('cursor-proprio');
 
     var mouseX = -100, mouseY = -100, borraoX = -100, borraoY = -100;
+    var velX = 0, velY = 0, angulo = 0;
+    var MOLA = 0.2, ATRITO = 0.68;   // mola mais forte = segue mais rápido; atrito menor = balança mais
     var SELETOR_CLICAVEL = 'a, button, label, select, summary, [role="button"], input[type="checkbox"], input[type="radio"], input[type="submit"]';
 
     document.addEventListener('mousemove', function (evento) {
@@ -226,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!raizCursor.classList.contains('cursor-visivel')) {
         borraoX = mouseX;
         borraoY = mouseY;
+        velX = velY = 0;
         raizCursor.classList.add('cursor-visivel');
       }
       raizCursor.classList.toggle('cursor-sobre-link', !!evento.target.closest(SELETOR_CLICAVEL));
@@ -246,9 +251,20 @@ document.addEventListener('DOMContentLoaded', function () {
       if (borrao.parentNode !== destino && !animando) {
         destino.appendChild(borrao);
       }
-      borraoX += (mouseX - borraoX) * 0.35;
-      borraoY += (mouseY - borraoY) * 0.35;
-      borrao.style.transform = 'translate3d(' + borraoX + 'px,' + borraoY + 'px,0)';
+      velX = (velX + (mouseX - borraoX) * MOLA) * ATRITO;
+      velY = (velY + (mouseY - borraoY) * MOLA) * ATRITO;
+      borraoX += velX;
+      borraoY += velY;
+
+      // Esticar: quanto mais rápido, mais alongado (com limite, para não
+      // virar um risco). Parado, mantém o último ângulo para não tremer.
+      var velocidade = Math.sqrt(velX * velX + velY * velY);
+      if (velocidade > 0.6) { angulo = Math.atan2(velY, velX) * 180 / Math.PI; }
+      var estica = Math.min(velocidade / 40, 0.45);
+      borrao.style.transform =
+        'translate3d(' + borraoX + 'px,' + borraoY + 'px,0)' +
+        ' rotate(' + angulo + 'deg)' +
+        ' scale(' + (1 + estica) + ',' + (1 - estica * 0.45) + ')';
       window.requestAnimationFrame(animar);
     })();
   }
