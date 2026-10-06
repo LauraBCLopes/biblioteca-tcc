@@ -107,6 +107,98 @@ if (($_GET['exportar'] ?? '') === 'csv') {
     exit;
 }
 
+// ---------- dados dos relatórios em PDF ----------
+// O PDF é montado no navegador (assets/js/relatorios-pdf.js, com a jsPDF);
+// aqui só saem os dados em JSON. Empréstimos em aberto e atrasos são a
+// situação de HOJE; os totais por livro e por leitor contam tudo o que foi
+// emprestado desde o início até a data "Até" do período escolhido.
+if (($_GET['dados_pdf'] ?? '') === '1') {
+    $hojeTs = strtotime($hoje);
+    $diasAtraso = function (string $prevista) use ($hojeTs): int {
+        return max(0, (int) round(($hojeTs - strtotime($prevista)) / 86400));
+    };
+    $dataBr = function (?string $data): string {
+        return $data ? date('d/m/Y', strtotime($data)) : '';
+    };
+
+    $abertos = [];
+    foreach (consultar($pdo,
+        "SELECT e.data_emprestimo, e.data_prevista, e.status, e.renovacoes,
+                l.codigo AS livro_codigo, l.titulo AS livro_titulo,
+                r.nome AS leitor_nome, r.email AS leitor_email, r.turma AS leitor_turma
+           FROM emprestimos e
+           JOIN livros l   ON l.id = e.livro_id
+           JOIN leitores r ON r.id = e.leitor_id
+          WHERE e.status != 'devolvido'
+          ORDER BY e.data_prevista ASC, l.titulo ASC") as $linha) {
+        $atrasado = $linha['status'] === 'atrasado';
+        $abertos[] = [
+            'livro'      => $linha['livro_titulo'],
+            'codigo'     => $linha['livro_codigo'] ?? '',
+            'leitor'     => $linha['leitor_nome'],
+            'contato'    => $linha['leitor_email'],
+            'turma'      => $linha['leitor_turma'] ?? '',
+            'emprestimo' => $dataBr($linha['data_emprestimo']),
+            'prazo'      => $dataBr($linha['data_prevista']),
+            'renovacoes' => (int) $linha['renovacoes'],
+            'atrasado'   => $atrasado,
+            'dias'       => $atrasado ? $diasAtraso($linha['data_prevista']) : 0,
+        ];
+    }
+
+    $porLivro = [];
+    foreach (consultar($pdo,
+        "SELECT l.titulo, l.autor, l.codigo, COUNT(e.id) AS total,
+                SUM(CASE WHEN e.status != 'devolvido' THEN 1 ELSE 0 END) AS abertos
+           FROM livros l
+           JOIN emprestimos e ON e.livro_id = l.id AND e.data_emprestimo <= :ate
+          GROUP BY l.id, l.titulo, l.autor, l.codigo
+          ORDER BY total DESC, l.titulo ASC", ['ate' => $ate]) as $linha) {
+        $porLivro[] = [
+            'livro'   => $linha['titulo'],
+            'autor'   => $linha['autor'],
+            'codigo'  => $linha['codigo'] ?? '',
+            'total'   => (int) $linha['total'],
+            'abertos' => (int) $linha['abertos'],
+        ];
+    }
+
+    $porLeitor = [];
+    foreach (consultar($pdo,
+        "SELECT r.nome, r.email, r.turma, r.status,
+                COUNT(e.id) AS total,
+                SUM(CASE WHEN e.status != 'devolvido' THEN 1 ELSE 0 END) AS abertos,
+                SUM(CASE WHEN e.status = 'atrasado' THEN 1 ELSE 0 END) AS atrasados
+           FROM leitores r
+           LEFT JOIN emprestimos e ON e.leitor_id = r.id AND e.data_emprestimo <= :ate
+          GROUP BY r.id, r.nome, r.email, r.turma, r.status
+          ORDER BY total DESC, r.nome ASC", ['ate' => $ate]) as $linha) {
+        $porLeitor[] = [
+            'leitor'    => $linha['nome'],
+            'contato'   => $linha['email'],
+            'turma'     => $linha['turma'] ?? '',
+            'bloqueado' => $linha['status'] === 'bloqueado',
+            'total'     => (int) $linha['total'],
+            'abertos'   => (int) $linha['abertos'],
+            'atrasados' => (int) $linha['atrasados'],
+        ];
+    }
+
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store');
+    echo json_encode([
+        'gerado_em'    => date('d/m/Y \à\s H:i'),
+        'hoje'         => $dataBr($hoje),
+        'ate'          => $dataBr($ate),
+        'ate_iso'      => $ate,
+        'total_livros' => contar($pdo, 'SELECT COUNT(*) FROM livros'),
+        'abertos'      => $abertos,
+        'por_livro'    => $porLivro,
+        'por_leitor'   => $porLeitor,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // ---------- números do período ----------
 $emprestimosPeriodo = contar($pdo,
     'SELECT COUNT(*) FROM emprestimos WHERE data_emprestimo BETWEEN :de AND :ate', $intervalo);
@@ -283,6 +375,23 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
       <button type="submit" class="btn <?= $periodo === 'personalizado' ? 'primary' : 'ghost' ?> small">Aplicar período</button>
     </form>
+
+    <div class="panel pdf-painel" data-pdf-url="<?= e(urlRelatorio(['dados_pdf' => '1'])) ?>">
+      <h3>Baixar relatórios em PDF</h3>
+      <p class="sub">
+        Empréstimos em aberto e atrasos mostram a situação de hoje (<?= date('d/m/Y') ?>).
+        Os totais por livro e por leitor contam tudo o que foi emprestado até
+        <strong><?= date('d/m/Y', strtotime($ate)) ?></strong> (a data "Até" do período).
+      </p>
+      <div class="pdf-botoes">
+        <button type="button" class="btn ghost small" data-pdf="abertos">Livros emprestados</button>
+        <button type="button" class="btn ghost small" data-pdf="atrasados">Livros atrasados</button>
+        <button type="button" class="btn ghost small" data-pdf="livros">Empréstimos por livro</button>
+        <button type="button" class="btn ghost small" data-pdf="leitores">Empréstimos por leitor</button>
+        <button type="button" class="btn primary small" data-pdf="completo">Relatório completo</button>
+      </div>
+      <p class="pdf-aviso" aria-live="polite" hidden></p>
+    </div>
 
     <div class="stat-grid">
       <div class="stat-card">
@@ -516,4 +625,7 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
     <?php endif; ?>
 
+<script src="assets/js/vendor/jspdf.umd.min.js?v=2.5.1"></script>
+<script src="assets/js/vendor/jspdf.plugin.autotable.min.js?v=3.8.2"></script>
+<script src="assets/js/relatorios-pdf.js?v=<?= VERSAO_ASSETS ?>"></script>
 <?php require __DIR__ . '/includes/layout_rodape.php'; ?>
