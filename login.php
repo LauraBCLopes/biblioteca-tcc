@@ -93,7 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="hint">
           Login único para alunos e administradores — o acesso é liberado conforme o seu cadastro.<br>
-          Ainda não tem conta? <a href="cadastro.php">Cadastre-se</a>
+          <!-- admin não se autocadastra: só outro admin cria, em Configurações (limite de 2) -->
+          <span data-so-tipo="aluno"<?= $tipoLogin === 'aluno' ? '' : ' hidden' ?>>Ainda não tem conta? <a href="cadastro.php">Cadastre-se</a></span>
+          <span data-so-tipo="admin"<?= $tipoLogin === 'admin' ? '' : ' hidden' ?>>Contas de administrador são criadas por um administrador já cadastrado.</span>
         </div>
       </div>
     </div>

@@ -159,7 +159,7 @@ a{ color: var(--roxo); text-decoration:none; }
 .login-user-field input:focus{ outline:none; }
 .login-user-field:has(input:focus){ outline:2px solid var(--roxo-claro); outline-offset:1px; border-color: var(--roxo-claro); }
 .login-suffix{ color: var(--texto-secundario); font-size:13px; white-space:nowrap; }
-.login-suffix[hidden]{ display:none; }
+.login-suffix[hidden], [data-so-tipo][hidden]{ display:none; }
 .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
 .field label{ font-size:12.5px; font-weight:600; color: var(--texto-secundario); }
 .field input, .field select{

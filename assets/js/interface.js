@@ -51,6 +51,10 @@ document.addEventListener('DOMContentLoaded', function () {
       aba.classList.add('active');
       if (tipoLoginInput) { tipoLoginInput.value = aba.dataset.tipo; }
       if (sufixoLogin) { sufixoLogin.textContent = '@' + dominios[aba.dataset.tipo]; }
+      // textos que só valem para um tipo de conta (ex.: "Cadastre-se" só para aluno)
+      document.querySelectorAll('[data-so-tipo]').forEach(function (el) {
+        el.hidden = el.dataset.soTipo !== aba.dataset.tipo;
+      });
     });
   });
 
