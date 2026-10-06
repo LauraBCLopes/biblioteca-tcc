@@ -594,26 +594,18 @@ tbody tr:hover{ background: var(--fundo); }
 
 /* ---------- Cursor "blurry dot" (montado pelo interface.js) ----------
    Só em computador com mouse. A classe .cursor-proprio no <html> esconde a
-   seta do navegador; se o JS não rodar, o cursor normal continua. */
+   seta do navegador; se o JS não rodar, o cursor normal continua.
+   Um círculo só, com o centro na cor mais forte, desbotando para as bordas. */
 .cursor-proprio, .cursor-proprio *{ cursor:none !important; }
-.cursor-ponto, .cursor-borrao{
-  position:fixed; left:0; top:0; z-index:2147483647; pointer-events:none;
-  border-radius:50%; opacity:0; transition: opacity .2s ease;
-  will-change: transform;
-}
-.cursor-ponto{
-  width:8px; height:8px; margin:-4px 0 0 -4px; background: var(--roxo);
-  transition: opacity .2s ease, width .2s ease, height .2s ease, margin .2s ease;
-}
 .cursor-borrao{
-  width:44px; height:44px; margin:-22px 0 0 -22px;
-  background: var(--gradiente); filter: blur(12px); opacity:0;
+  position:fixed; left:0; top:0; z-index:2147483647; pointer-events:none;
+  width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%;
+  background: radial-gradient(circle, var(--roxo) 0%, var(--roxo) 22%, var(--azul) 48%, transparent 72%);
+  filter: blur(3px) saturate(1.4);
+  opacity:0; will-change: transform;
   transition: opacity .2s ease, width .25s ease, height .25s ease, margin .25s ease;
 }
-.cursor-visivel .cursor-ponto{ opacity:1; }
-.cursor-visivel .cursor-borrao{ opacity:.45; }
-/* sobre links e botões o brilho cresce e o ponto encolhe */
-.cursor-sobre-link .cursor-borrao{ width:64px; height:64px; margin:-32px 0 0 -32px; }
-.cursor-visivel.cursor-sobre-link .cursor-borrao{ opacity:.6; }
-.cursor-sobre-link .cursor-ponto{ width:4px; height:4px; margin:-2px 0 0 -2px; }
-.cursor-pressionado .cursor-borrao{ width:32px; height:32px; margin:-16px 0 0 -16px; }
+.cursor-visivel .cursor-borrao{ opacity:.95; }
+/* sobre links e botões o círculo cresce; ao clicar, se contrai */
+.cursor-sobre-link .cursor-borrao{ width:50px; height:50px; margin:-25px 0 0 -25px; }
+.cursor-pressionado .cursor-borrao{ width:24px; height:24px; margin:-12px 0 0 -12px; }

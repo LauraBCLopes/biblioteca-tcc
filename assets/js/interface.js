@@ -205,20 +205,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Cursor "blurry dot": um ponto que segue o mouse na hora e um brilho
-  // desfocado que vem atrás, suavizado. Só em aparelho com mouse (no celular
+  // Cursor "blurry dot": um círculo desfocado, mais forte no centro, que
+  // segue o mouse com um leve atraso. Só em aparelho com mouse (no celular
   // não existe cursor) e respeitando quem pediu menos animação no sistema.
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
       !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     var raizCursor = document.documentElement;
-    var ponto = document.createElement('div');
     var borrao = document.createElement('div');
-    ponto.className = 'cursor-ponto';
     borrao.className = 'cursor-borrao';
-    ponto.setAttribute('aria-hidden', 'true');
     borrao.setAttribute('aria-hidden', 'true');
     document.body.appendChild(borrao);
-    document.body.appendChild(ponto);
     raizCursor.classList.add('cursor-proprio');
 
     var mouseX = -100, mouseY = -100, borraoX = -100, borraoY = -100;
@@ -247,13 +243,11 @@ document.addEventListener('DOMContentLoaded', function () {
       // dialog deslocaria o cursor)
       var destino = document.querySelector('dialog[open]') || document.body;
       var animando = destino.getAnimations && destino.getAnimations().length > 0;
-      if (ponto.parentNode !== destino && !animando) {
+      if (borrao.parentNode !== destino && !animando) {
         destino.appendChild(borrao);
-        destino.appendChild(ponto);
       }
-      borraoX += (mouseX - borraoX) * 0.18;
-      borraoY += (mouseY - borraoY) * 0.18;
-      ponto.style.transform = 'translate3d(' + mouseX + 'px,' + mouseY + 'px,0)';
+      borraoX += (mouseX - borraoX) * 0.35;
+      borraoY += (mouseY - borraoY) * 0.35;
       borrao.style.transform = 'translate3d(' + borraoX + 'px,' + borraoY + 'px,0)';
       window.requestAnimationFrame(animar);
     })();
