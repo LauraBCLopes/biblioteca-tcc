@@ -151,7 +151,7 @@ biblioteca-tcc/
 ├── recuperar-senha.php         → redefinição de senha
 ├── configuracoes.php           → dados da conta e troca de senha (admin ou aluno);
 │                                  admin também cadastra outros administradores aqui (limite: 2)
-├── relatorios.php              → relatórios por período + exportação CSV (?exportar=csv), admin
+├── relatorios.php              → relatórios por período + relatórios em PDF, admin
 ├── index.php                  → painel: estatísticas (admin) ou meus empréstimos/reservas (aluno)
 ├── livros.php                  → catálogo + cadastro/edição (?editar=ID) + exclusão (?excluir=ID), admin
 ├── leitores.php                → gestão de leitores: cadastro/edição, exclusão (?excluir=ID),
@@ -229,8 +229,10 @@ na URL, então dá pra copiar/colar o link do relatório. Mostra:
 - **Leitores mais ativos** no período.
 - **Atrasos em aberto**: situação de hoje, independente do período.
 
-O botão "Exportar CSV" baixa a movimentação do período (`?exportar=csv`) com
-separador `;` e BOM UTF-8, pra abrir direto no Excel sem quebrar os acentos.
+Os relatórios em PDF (livros emprestados, atrasados, empréstimos por livro, por
+leitor e o relatório completo) seguem o modelo de documento oficial da escola. O
+PDF é montado no navegador (`assets/js/relatorios-pdf.js`, com jsPDF + AutoTable
+em `assets/js/vendor`) a partir dos dados de `relatorios.php?dados_pdf=1`.
 
 > Os agrupamentos por mês são feitos no PHP, e não com `DATE_FORMAT`/`TO_CHAR`,
 > para a mesma consulta funcionar tanto no MySQL local quanto no Postgres do

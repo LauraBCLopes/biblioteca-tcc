@@ -68,45 +68,6 @@ function maiorQtd(array $linhas): int
     return $valores ? max(max($valores), 1) : 1;
 }
 
-// ---------- exportação CSV ----------
-// Fica antes das consultas do relatório: a exportação só precisa do período,
-// e sai daqui direto (antes de qualquer HTML, por causa dos headers).
-if (($_GET['exportar'] ?? '') === 'csv') {
-    $linhas = consultar($pdo,
-        'SELECT e.data_emprestimo, e.data_prevista, e.data_devolucao, e.status, e.renovacoes,
-                l.codigo AS livro_codigo, l.titulo AS livro_titulo,
-                r.nome AS leitor_nome, r.email AS leitor_email
-           FROM emprestimos e
-           JOIN livros l   ON l.id = e.livro_id
-           JOIN leitores r ON r.id = e.leitor_id
-          WHERE e.data_emprestimo BETWEEN :de AND :ate
-          ORDER BY e.data_emprestimo ASC', $intervalo);
-
-    header('Content-Type: text/csv; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="relatorio-' . $de . '-a-' . $ate . '.csv"');
-
-    $saida = fopen('php://output', 'w');
-    fwrite($saida, "\xEF\xBB\xBF");   // BOM: faz o Excel abrir os acentos corretamente
-    fputcsv($saida, ['Empréstimo', 'Prazo', 'Devolução', 'Situação', 'Renovações',
-                     'Código', 'Livro', 'Leitor', 'E-mail'], ';');
-
-    foreach ($linhas as $linha) {
-        fputcsv($saida, [
-            date('d/m/Y', strtotime($linha['data_emprestimo'])),
-            date('d/m/Y', strtotime($linha['data_prevista'])),
-            $linha['data_devolucao'] ? date('d/m/Y', strtotime($linha['data_devolucao'])) : '',
-            $linha['status'],
-            (int) $linha['renovacoes'],
-            $linha['livro_codigo'],
-            $linha['livro_titulo'],
-            $linha['leitor_nome'],
-            $linha['leitor_email'],
-        ], ';');
-    }
-    fclose($saida);
-    exit;
-}
-
 // ---------- dados dos relatórios em PDF ----------
 // O PDF é montado no navegador (assets/js/relatorios-pdf.js, com a jsPDF);
 // aqui só saem os dados em JSON. Empréstimos em aberto e atrasos são a
@@ -353,7 +314,7 @@ require __DIR__ . '/includes/layout_topo.php';
           até <strong><?= date('d/m/Y', strtotime($ate)) ?></strong>
         </p>
       </div>
-      <a class="btn ghost small" href="<?= e(urlRelatorio(['exportar' => 'csv'])) ?>">Exportar CSV</a>
+      <button type="button" class="btn primary small" data-pdf="completo">Baixar relatório em PDF</button>
     </div>
 
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">

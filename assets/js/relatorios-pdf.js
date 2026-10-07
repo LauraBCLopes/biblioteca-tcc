@@ -339,7 +339,8 @@ document.addEventListener('DOMContentLoaded', function () {
     aviso.hidden = false;
   }
 
-  painel.querySelectorAll('[data-pdf]').forEach(function (botao) {
+  // botões do painel e o "Baixar relatório em PDF" do topo da página
+  document.querySelectorAll('[data-pdf]').forEach(function (botao) {
     botao.addEventListener('click', function () {
       if (!window.jspdf || !window.jspdf.jsPDF) {
         mostrarAviso('Não foi possível carregar o gerador de PDF. Recarregue a página e tente de novo.', true);
