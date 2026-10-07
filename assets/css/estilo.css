@@ -126,37 +126,45 @@ a{ color: var(--roxo); text-decoration:none; }
   min-height:100vh; position:relative; overflow:hidden;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   padding: 48px 20px;
-  background:
-    linear-gradient(var(--auth-veu), var(--auth-veu)),
-    radial-gradient(circle at var(--luz1-x) var(--luz1-y), rgba(178,166,255,0.7), transparent var(--luz1-r)),
-    radial-gradient(circle at var(--luz2-x) var(--luz2-y), rgba(110,175,255,0.65), transparent var(--luz2-r)),
-    radial-gradient(circle at var(--luz3-x) var(--luz3-y), rgba(48,36,160,0.55), transparent var(--luz3-r)),
-    var(--gradiente);
-  animation: auth-luzes 9s ease-in-out infinite alternate;
+  background: linear-gradient(var(--auth-veu), var(--auth-veu)), var(--gradiente);
 }
-/* Movimento de cores do fundo: três manchas de luz (lilás, azul claro e
-   anil) andam, crescem e encolhem em volta do próprio lugar — o degradê
-   continua roxo à esquerda e azul à direita, só "respira". @property deixa
-   o navegador animar esses valores; sem suporte, o fundo fica parado. */
-@property --luz1-x{ syntax:'<percentage>'; inherits:false; initial-value:12%; }
-@property --luz1-y{ syntax:'<percentage>'; inherits:false; initial-value:18%; }
-@property --luz1-r{ syntax:'<percentage>'; inherits:false; initial-value:38%; }
-@property --luz2-x{ syntax:'<percentage>'; inherits:false; initial-value:88%; }
-@property --luz2-y{ syntax:'<percentage>'; inherits:false; initial-value:70%; }
-@property --luz2-r{ syntax:'<percentage>'; inherits:false; initial-value:40%; }
-@property --luz3-x{ syntax:'<percentage>'; inherits:false; initial-value:50%; }
-@property --luz3-y{ syntax:'<percentage>'; inherits:false; initial-value:100%; }
-@property --luz3-r{ syntax:'<percentage>'; inherits:false; initial-value:36%; }
-@keyframes auth-luzes{
-  0%  { --luz1-x:12%; --luz1-y:18%; --luz1-r:38%; --luz2-x:88%; --luz2-y:70%; --luz2-r:40%; --luz3-x:50%; --luz3-y:100%; --luz3-r:36%; }
-  25% { --luz1-x:32%; --luz1-y:30%; --luz1-r:50%; --luz2-x:74%; --luz2-y:52%; --luz2-r:32%; --luz3-x:30%; --luz3-y:82%; --luz3-r:46%; }
-  50% { --luz1-x:20%; --luz1-y:50%; --luz1-r:32%; --luz2-x:94%; --luz2-y:88%; --luz2-r:52%; --luz3-x:62%; --luz3-y:78%; --luz3-r:30%; }
-  75% { --luz1-x:6%;  --luz1-y:32%; --luz1-r:46%; --luz2-x:70%; --luz2-y:82%; --luz2-r:36%; --luz3-x:44%; --luz3-y:92%; --luz3-r:48%; }
-  100%{ --luz1-x:28%; --luz1-y:8%;  --luz1-r:40%; --luz2-x:84%; --luz2-y:60%; --luz2-r:46%; --luz3-x:56%; --luz3-y:104%; --luz3-r:38%; }
+/* Nuvens de cor no fundo: formas grandes e bem desfocadas (lilás, azul claro,
+   anil e branco translúcido) que flutuam devagar, crescem e se misturam,
+   cada uma num ritmo diferente. O roxo continua mais à esquerda e o azul mais
+   à direita. Ficam atrás das estantes (::before), do cartão e da fumaça. */
+.auth-nuvens{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+.auth-nuvens span{
+  position:absolute; border-radius:50%; filter: blur(48px);
+  will-change: transform; animation: nuvem-a 22s ease-in-out infinite alternate;
 }
-@media (prefers-reduced-motion: reduce){ .auth-page{ animation:none; } }
+.auth-nuvens span:nth-child(1){ width:58vmax; height:38vmax; left:-14vmax; top:-12vmax; background: rgba(178,166,255,0.75); animation-duration:21s; }
+.auth-nuvens span:nth-child(2){ width:46vmax; height:30vmax; left:-6vmax;  top:40%;    background: rgba(140,110,255,0.6);  animation-name:nuvem-b; animation-duration:27s; }
+.auth-nuvens span:nth-child(3){ width:52vmax; height:34vmax; right:-16vmax; top:-8vmax; background: rgba(110,175,255,0.7);  animation-name:nuvem-c; animation-duration:24s; }
+.auth-nuvens span:nth-child(4){ width:60vmax; height:36vmax; right:-18vmax; bottom:-16vmax; background: rgba(120,190,255,0.6); animation-name:nuvem-a; animation-duration:30s; animation-delay:-8s; }
+.auth-nuvens span:nth-child(5){ width:44vmax; height:26vmax; left:28%;  bottom:-14vmax; background: rgba(48,36,160,0.55); animation-name:nuvem-b; animation-duration:25s; animation-delay:-5s; }
+.auth-nuvens span:nth-child(6){ width:34vmax; height:20vmax; left:18%;  top:12%;   background: rgba(255,255,255,0.22); animation-name:nuvem-c; animation-duration:19s; animation-delay:-11s; }
+.auth-nuvens span:nth-child(7){ width:30vmax; height:18vmax; right:14%; top:52%;   background: rgba(255,255,255,0.18); animation-name:nuvem-a; animation-duration:23s; animation-delay:-14s; }
+@keyframes nuvem-a{
+  0%  { transform: translate(0, 0) scale(1); }
+  35% { transform: translate(9vmax, 4vmax) scale(1.15, 1.05); }
+  70% { transform: translate(3vmax, 9vmax) scale(0.95, 1.12); }
+  100%{ transform: translate(12vmax, 2vmax) scale(1.2, 1); }
+}
+@keyframes nuvem-b{
+  0%  { transform: translate(0, 0) scale(1.05, 1); }
+  40% { transform: translate(-7vmax, -6vmax) scale(1.2, 1.1); }
+  75% { transform: translate(6vmax, -3vmax) scale(1, 1.2); }
+  100%{ transform: translate(-3vmax, 5vmax) scale(1.15, 0.95); }
+}
+@keyframes nuvem-c{
+  0%  { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-10vmax, 5vmax) scale(1.1, 1.2); }
+  65% { transform: translate(-4vmax, 10vmax) scale(1.25, 1); }
+  100%{ transform: translate(-12vmax, 3vmax) scale(0.95, 1.1); }
+}
+@media (prefers-reduced-motion: reduce){ .auth-nuvens span{ animation:none; } }
 .auth-page::before{
-  content:''; position:absolute; inset:0; opacity:0.13; pointer-events:none;
+  content:''; position:absolute; inset:0; z-index:1; opacity:0.13; pointer-events:none;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='150' fill='white'%3E%3Crect x='0' y='140' width='180' height='6'/%3E%3Crect x='8' y='70' width='16' height='70' rx='2'/%3E%3Crect x='27' y='58' width='12' height='82' rx='2' fill-opacity='.7'/%3E%3Crect x='42' y='80' width='20' height='60' rx='2'/%3E%3Crect x='65' y='62' width='14' height='78' rx='2' fill-opacity='.6'/%3E%3Crect x='82' y='74' width='18' height='66' rx='2'/%3E%3Crect x='103' y='54' width='11' height='86' rx='2' fill-opacity='.7'/%3E%3Crect x='117' y='84' width='22' height='56' rx='2'/%3E%3Crect x='144' y='66' width='14' height='74' rx='2' fill-opacity='.6' transform='rotate(-8 151 140)'/%3E%3Crect x='160' y='76' width='14' height='64' rx='2'/%3E%3C/svg%3E") left top / 180px 150px repeat;
   -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.35) 45%, transparent 75%);
           mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.35) 45%, transparent 75%);
