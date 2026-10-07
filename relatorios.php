@@ -188,6 +188,7 @@ if (($_GET['dados_pdf'] ?? '') === '1') {
     header('Cache-Control: no-store');
     echo json_encode([
         'gerado_em'    => date('d/m/Y \à\s H:i'),
+        'emitido_por'  => adminAtual()['nome'] ?? '',
         'hoje'         => $dataBr($hoje),
         'ate'          => $dataBr($ate),
         'ate_iso'      => $ate,
@@ -626,6 +627,5 @@ require __DIR__ . '/includes/layout_topo.php';
     <?php endif; ?>
 
 <script src="assets/js/vendor/jspdf.umd.min.js?v=2.5.1"></script>
-<script src="assets/js/vendor/jspdf.plugin.autotable.min.js?v=3.8.2"></script>
 <script src="assets/js/relatorios-pdf.js?v=<?= VERSAO_ASSETS ?>"></script>
 <?php require __DIR__ . '/includes/layout_rodape.php'; ?>
