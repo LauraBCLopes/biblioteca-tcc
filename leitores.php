@@ -111,14 +111,59 @@ if (!empty($_GET['bloqueio'])) {
     exit;
 }
 
+// Por quanto tempo depois de redefinir a senha ainda dá para desfazer (em segundos).
+const PRAZO_DESFAZER_SENHA = 600;
+
 // ---------- resetar senha (leitor esqueceu a senha) ----------
 if (!empty($_GET['resetar_senha'])) {
     $idResetar = (int) $_GET['resetar_senha'];
 
+    $stmt = $pdo->prepare('SELECT nome, senha_hash FROM leitores WHERE id = :id');
+    $stmt->execute(['id' => $idResetar]);
+    $leitor = $stmt->fetch();
+
+    if (!$leitor) {
+        flash('Leitor não encontrado.', 'erro');
+        header('Location: leitores.php');
+        exit;
+    }
+    if ($leitor['senha_hash'] === null) {
+        flash($leitor['nome'] . ' ainda não tem senha definida. Ele(a) pode criar uma em "Criar conta".', 'erro');
+        header('Location: leitores.php');
+        exit;
+    }
+
     $stmt = $pdo->prepare('UPDATE leitores SET senha_hash = NULL WHERE id = :id');
     $stmt->execute(['id' => $idResetar]);
 
-    flash('Senha removida. O leitor pode definir uma nova em "Criar conta", com o mesmo usuário/e-mail.');
+    // guarda a senha antiga (já criptografada) para o botão "Desfazer"
+    $_SESSION['senha_removida'] = ['id' => $idResetar, 'nome' => $leitor['nome'], 'hash' => $leitor['senha_hash'], 'em' => time()];
+    flash('Senha de ' . $leitor['nome'] . ' removida. O leitor pode definir uma nova em "Criar conta", com o mesmo usuário/e-mail.', 'ok',
+          ['texto' => 'Desfazer', 'url' => 'leitores.php?desfazer_senha=1']);
+    header('Location: leitores.php');
+    exit;
+}
+
+// ---------- desfazer a última redefinição de senha ----------
+if (!empty($_GET['desfazer_senha'])) {
+    $removida = $_SESSION['senha_removida'] ?? null;
+    unset($_SESSION['senha_removida']);
+
+    if (!$removida || time() - $removida['em'] > PRAZO_DESFAZER_SENHA) {
+        flash('Não há redefinição de senha recente para desfazer.', 'erro');
+        header('Location: leitores.php');
+        exit;
+    }
+
+    // só devolve a senha antiga se o leitor ainda não criou uma nova nesse meio-tempo
+    $stmt = $pdo->prepare('UPDATE leitores SET senha_hash = :hash WHERE id = :id AND senha_hash IS NULL');
+    $stmt->execute(['hash' => $removida['hash'], 'id' => $removida['id']]);
+
+    if ($stmt->rowCount() > 0) {
+        flash('Redefinição desfeita: ' . $removida['nome'] . ' voltou a entrar com a senha antiga.');
+    } else {
+        flash('Não foi possível desfazer: ' . $removida['nome'] . ' já criou uma senha nova.', 'erro');
+    }
     header('Location: leitores.php');
     exit;
 }
@@ -270,7 +315,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <td style="display:flex; gap:6px; flex-wrap:wrap;">
                 <a class="btn ghost small" href="?editar=<?= (int) $u['id'] ?>">Editar</a>
                 <a class="btn ghost small" href="?resetar_senha=<?= (int) $u['id'] ?>"
-                   data-confirmar="Remover a senha atual de &quot;<?= e($u['nome']) ?>&quot;? O leitor vai precisar definir uma nova senha em Criar conta."
+                   data-confirmar="Remover a senha atual de &quot;<?= e($u['nome']) ?>&quot;? O leitor vai precisar definir uma nova senha em Criar conta. Você poderá desfazer logo em seguida."
                    data-confirmar-titulo="Redefinir senha"
                    data-confirmar-botao="Redefinir senha">Redefinir senha</a>
                 <a class="btn ghost small" href="?bloqueio=<?= (int) $u['id'] ?>">
