@@ -44,30 +44,36 @@ function e(?string $valor): string
 }
 
 /**
- * SVG inline do logo Bibliotech (livro fechado com marcador e etiqueta,
- * em traço branco sobre o gradiente roxo → azul do sistema).
- * Inline (não é um arquivo de imagem) para funcionar igual local e na Vercel,
- * e para poder herdar as cores do tema via gradiente definido no próprio SVG.
+ * SVG inline do logo Bibliotech: uma casa (telhado azul-marinho) com quatro
+ * livros em pé — roxo, azul, roxo escuro e lilás — sobre uma base, num quadro
+ * claro de cantos arredondados (assim o telhado escuro aparece também no tema
+ * escuro). Inline (não é um arquivo de imagem) para funcionar igual local e na Vercel.
  */
 function bibliotechLogo(int $tamanho = 34): string
 {
-    $id = 'lg' . $tamanho;
-    // Em tamanho pequeno (menu lateral) os detalhes finos viram borrão:
-    // some a linha de página do topo e as linhas de dentro da etiqueta.
-    $detalhado = $tamanho >= 44;
-    $paginaTopo = $detalhado ? 'M15.2 9h14.3' : '';
-    $linhasEtiqueta = $detalhado ? '<path d="M19.6 21.6h5M19.6 23.5h5"/>' : '';
-    return '<svg width="' . $tamanho . '" height="' . $tamanho . '" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="' . $id . '" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stop-color="#6C63E8"/><stop offset="1" stop-color="#3F7FE8"/>
-        </linearGradient></defs>
-        <rect width="40" height="40" rx="10" fill="url(#' . $id . ')"/>
-        <g stroke="#fff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="10.5" y="7" width="19" height="26" rx="2.6"/>
-          <path d="M10.5 9.2A1.8 1.8 0 0 0 12.3 11H22.6M26.4 11h3.1' . $paginaTopo . 'M15.2 11v22"/>
-          <path d="M22.6 11v5.6l1.9-1.6 1.9 1.6V11"/>
-          <rect x="17.6" y="19.4" width="9" height="6.2" rx="1.2"/>
-          ' . $linhasEtiqueta . '
+    // livros: x, topo, largura, cor (todos terminam na mesma altura, em cima da base)
+    $livros = [
+        [7.7, 17.9, 5.0, '#6649D6'],
+        [14.1, 15.4, 4.8, '#4C6FE3'],
+        [20.3, 15.9, 5.4, '#5934B8'],
+        [27.0, 18.3, 5.0, '#9D87F2'],
+    ];
+    $base = 31.8;
+    $desenho = '';
+    foreach ($livros as [$x, $topo, $largura, $cor]) {
+        $desenho .= '<rect x="' . $x . '" y="' . $topo . '" width="' . $largura . '" height="' . round($base - $topo, 2) . '" rx="0.9" fill="' . $cor . '"/>';
+        // faixas claras da lombada: duas perto do topo e uma perto da base
+        foreach ([$topo + 2.2, $topo + 3.6, $base - 2.3] as $faixa) {
+            $desenho .= '<rect x="' . $x . '" y="' . round($faixa, 2) . '" width="' . $largura . '" height="0.7" fill="#D9D4FB"/>';
+        }
+    }
+    return '<svg width="' . $tamanho . '" height="' . $tamanho . '" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bibliotech">
+        <rect width="40" height="40" rx="10" fill="#F3F1FF"/>
+        <g transform="translate(20 20.6) scale(1.1) translate(-20 -20.6)">
+        <path d="M8 16.6 19.9 10.2 31.8 16.6Z" fill="#B9B0F6"/>
+        ' . $desenho . '
+        <path d="M6.3 14.3 19.9 7.3 33.5 14.3" stroke="#0E3A8C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="5.5" y="32.3" width="29" height="1.7" rx="0.85" fill="#0E3A8C"/>
         </g>
       </svg>';
 }
