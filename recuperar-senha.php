@@ -18,7 +18,6 @@ if (isLoggedIn()) {
 </head>
 <body>
   <div class="auth-page">
-    <div class="auth-nuvens" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <div class="auth-center">
       <div class="auth-brand">
         <div class="brand-name">Bibliotech</div>

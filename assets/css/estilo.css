@@ -128,39 +128,8 @@ a{ color: var(--roxo); text-decoration:none; }
   padding: 48px 20px;
   background: linear-gradient(var(--auth-veu), var(--auth-veu)), var(--gradiente);
 }
-/* Nuvens no fundo: formas fofas e translúcidas (brancas, lilases e azuladas)
-   que atravessam a tela devagar, da esquerda para a direita, como nuvens
-   passando. O degradê roxo → azul por baixo não muda de lugar. Cada nuvem tem
-   altura, tamanho e velocidade próprios; o atraso negativo faz todas já
-   começarem espalhadas pela tela. Ficam atrás das estantes, do cartão e da fumaça. */
-.auth-nuvens{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
-.auth-nuvens span{
-  --c: rgba(255,255,255,0.16);
-  position:absolute; left:0; width:26vw; height:11vw; min-width:220px; min-height:94px;
-  background:
-    radial-gradient(ellipse 26% 42% at 24% 62%, var(--c) 60%, transparent 64%),
-    radial-gradient(ellipse 30% 52% at 46% 44%, var(--c) 60%, transparent 64%),
-    radial-gradient(ellipse 25% 42% at 69% 56%, var(--c) 60%, transparent 64%),
-    radial-gradient(ellipse 46% 28% at 50% 74%, var(--c) 60%, transparent 64%);
-  filter: blur(10px);
-  will-change: transform;
-  animation: nuvem-passa 70s linear infinite;
-}
-.auth-nuvens span:nth-child(1){ top:6%;  animation-duration:62s; animation-delay:-8s; }
-.auth-nuvens span:nth-child(2){ top:22%; --c: rgba(205,195,255,0.18); width:34vw; height:14vw; animation-duration:84s; animation-delay:-40s; }
-.auth-nuvens span:nth-child(3){ top:44%; --c: rgba(180,210,255,0.16); animation-duration:70s; animation-delay:-22s; }
-.auth-nuvens span:nth-child(4){ top:64%; width:30vw; height:13vw; animation-duration:78s; animation-delay:-60s; }
-.auth-nuvens span:nth-child(5){ top:80%; --c: rgba(205,195,255,0.15); width:22vw; height:9vw; animation-duration:58s; animation-delay:-30s; }
-.auth-nuvens span:nth-child(6){ top:34%; --c: rgba(255,255,255,0.12); width:20vw; height:8vw; animation-duration:52s; animation-delay:-14s; }
-.auth-nuvens span:nth-child(7){ top:12%; --c: rgba(180,210,255,0.13); width:24vw; height:10vw; animation-duration:66s; animation-delay:-50s; }
-@keyframes nuvem-passa{
-  0%  { transform: translate(-40vw, 0); }
-  50% { transform: translate(35vw, -1.5vw); }
-  100%{ transform: translate(110vw, 0); }
-}
-@media (prefers-reduced-motion: reduce){ .auth-nuvens span{ animation:none; transform: translateX(30vw); } }
 .auth-page::before{
-  content:''; position:absolute; inset:0; z-index:1; opacity:0.13; pointer-events:none;
+  content:''; position:absolute; inset:0; opacity:0.13; pointer-events:none;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='150' fill='white'%3E%3Crect x='0' y='140' width='180' height='6'/%3E%3Crect x='8' y='70' width='16' height='70' rx='2'/%3E%3Crect x='27' y='58' width='12' height='82' rx='2' fill-opacity='.7'/%3E%3Crect x='42' y='80' width='20' height='60' rx='2'/%3E%3Crect x='65' y='62' width='14' height='78' rx='2' fill-opacity='.6'/%3E%3Crect x='82' y='74' width='18' height='66' rx='2'/%3E%3Crect x='103' y='54' width='11' height='86' rx='2' fill-opacity='.7'/%3E%3Crect x='117' y='84' width='22' height='56' rx='2'/%3E%3Crect x='144' y='66' width='14' height='74' rx='2' fill-opacity='.6' transform='rotate(-8 151 140)'/%3E%3Crect x='160' y='76' width='14' height='64' rx='2'/%3E%3C/svg%3E") left top / 180px 150px repeat;
   -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.35) 45%, transparent 75%);
           mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.35) 45%, transparent 75%);
