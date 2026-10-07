@@ -25,6 +25,13 @@
   --auth-veu: rgba(24,18,80,0.12);
   --serie-1: #6C63E8;
   --serie-2: #1F9AA8;
+  /* cores da logo (bibliotechLogo em includes/functions.php) */
+  --logo-telhado: #1B2A78;
+  --logo-sotao: #C4BCF8;
+  --logo-livro-1: #6C55DC;
+  --logo-livro-2: #3F7FE8;
+  --logo-livro-3: #5634B8;
+  --logo-livro-4: #9D87F2;
   color-scheme: light;
 }
 
@@ -59,6 +66,12 @@
     --auth-veu: rgba(6,8,24,0.5);
     --serie-1: #7F78EC;
     --serie-2: #22A2B0;
+    --logo-telhado: #E7E9F7;
+    --logo-sotao: #4A4590;
+    --logo-livro-1: #8B78F0;
+    --logo-livro-2: #5B93F0;
+    --logo-livro-3: #7A5CE0;
+    --logo-livro-4: #B7A8F8;
     color-scheme: dark;
   }
 }
@@ -85,6 +98,12 @@
   --sidebar-fim: #14172E;
   --serie-1: #7F78EC;
   --serie-2: #22A2B0;
+  --logo-telhado: #E7E9F7;
+  --logo-sotao: #4A4590;
+  --logo-livro-1: #8B78F0;
+  --logo-livro-2: #5B93F0;
+  --logo-livro-3: #7A5CE0;
+  --logo-livro-4: #B7A8F8;
   color-scheme: dark;
 }
 *{ box-sizing: border-box; }

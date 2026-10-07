@@ -4,7 +4,7 @@
  * Troque este valor sempre que mudar o CSS ou o JS: assim o navegador
  * (principalmente no celular) baixa o arquivo novo em vez de usar o antigo.
  */
-const VERSAO_ASSETS = '2026-10-06p';
+const VERSAO_ASSETS = '2026-10-06q';
 
 /**
  * Funções auxiliares usadas em várias páginas do sistema.
@@ -44,36 +44,36 @@ function e(?string $valor): string
 }
 
 /**
- * SVG inline do logo Bibliotech: uma casa (telhado azul-marinho) com quatro
- * livros em pé — roxo, azul, roxo escuro e lilás — sobre uma base, num quadro
- * claro de cantos arredondados (assim o telhado escuro aparece também no tema
- * escuro). Inline (não é um arquivo de imagem) para funcionar igual local e na Vercel.
+ * SVG inline do logo Bibliotech: uma casa (telhado) com quatro livros em pé
+ * sobre uma base, em fundo transparente. As cores vêm das variáveis do tema
+ * (--logo-*, em estilo.css): telhado e base na cor do texto (azul-marinho no
+ * claro, quase branco no escuro) e livros no roxo/azul/lilás do sistema.
+ * Inline (não é um arquivo de imagem) para funcionar igual local e na Vercel.
  */
 function bibliotechLogo(int $tamanho = 34): string
 {
-    // livros: x, topo, largura, cor (todos terminam na mesma altura, em cima da base)
+    // livros: x, topo, largura, variável de cor (todos terminam em cima da base)
     $livros = [
-        [7.7, 17.9, 5.0, '#6649D6'],
-        [14.1, 15.4, 4.8, '#4C6FE3'],
-        [20.3, 15.9, 5.4, '#5934B8'],
-        [27.0, 18.3, 5.0, '#9D87F2'],
+        [7.7, 17.9, 5.0, '--logo-livro-1'],
+        [14.1, 15.4, 4.8, '--logo-livro-2'],
+        [20.3, 15.9, 5.4, '--logo-livro-3'],
+        [27.0, 18.3, 5.0, '--logo-livro-4'],
     ];
     $base = 31.8;
     $desenho = '';
     foreach ($livros as [$x, $topo, $largura, $cor]) {
-        $desenho .= '<rect x="' . $x . '" y="' . $topo . '" width="' . $largura . '" height="' . round($base - $topo, 2) . '" rx="0.9" fill="' . $cor . '"/>';
+        $desenho .= '<rect x="' . $x . '" y="' . $topo . '" width="' . $largura . '" height="' . round($base - $topo, 2) . '" rx="0.9" style="fill:var(' . $cor . ')"/>';
         // faixas claras da lombada: duas perto do topo e uma perto da base
         foreach ([$topo + 2.2, $topo + 3.6, $base - 2.3] as $faixa) {
-            $desenho .= '<rect x="' . $x . '" y="' . round($faixa, 2) . '" width="' . $largura . '" height="0.7" fill="#D9D4FB"/>';
+            $desenho .= '<rect x="' . $x . '" y="' . round($faixa, 2) . '" width="' . $largura . '" height="0.7" fill="#fff" fill-opacity="0.6"/>';
         }
     }
-    return '<svg width="' . $tamanho . '" height="' . $tamanho . '" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bibliotech">
-        <rect width="40" height="40" rx="10" fill="#F3F1FF"/>
+    return '<svg class="logo-bibliotech" width="' . $tamanho . '" height="' . $tamanho . '" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bibliotech">
         <g transform="translate(20 20.6) scale(1.1) translate(-20 -20.6)">
-        <path d="M8 16.6 19.9 10.2 31.8 16.6Z" fill="#B9B0F6"/>
+        <path d="M8 16.6 19.9 10.2 31.8 16.6Z" style="fill:var(--logo-sotao)"/>
         ' . $desenho . '
-        <path d="M6.3 14.3 19.9 7.3 33.5 14.3" stroke="#0E3A8C" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="5.5" y="32.3" width="29" height="1.7" rx="0.85" fill="#0E3A8C"/>
+        <path d="M6.3 14.3 19.9 7.3 33.5 14.3" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--logo-telhado)"/>
+        <rect x="5.5" y="32.3" width="29" height="1.7" rx="0.85" style="fill:var(--logo-telhado)"/>
         </g>
       </svg>';
 }
