@@ -272,6 +272,180 @@ document.addEventListener('DOMContentLoaded', function () {
     atualizar();
   });
 
+  // Campos de data (.field input[type="date"]): o calendário nativo também é
+  // desenhado fora da página, então ganha um calendário em HTML, nas mesmas
+  // condições da lista acima. O input original fica escondido e continua
+  // guardando a data como AAAA-MM-DD, que é o que o PHP recebe.
+  var MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho',
+    'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  var DIAS_SEMANA = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+  function paraISO(d) {
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function deISO(texto) {
+    var partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto || '');
+    return partes ? new Date(+partes[1], partes[2] - 1, +partes[3]) : null;
+  }
+  function semHora(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  (usaCursorProprio ? document.querySelectorAll('.field input[type="date"]') : []).forEach(function (input) {
+    var wrap = document.createElement('div');
+    wrap.className = 'select-custom data-custom';   // select-custom: fecha junto com as listas
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    input.tabIndex = -1;
+
+    var botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'data-custom-trigger';
+    botao.setAttribute('aria-haspopup', 'dialog');
+    var rotulo = input.closest('.field').querySelector('label');
+    if (rotulo) {
+      botao.setAttribute('aria-label', rotulo.textContent.trim());
+      // o <label for> focaria o input escondido; leva para o botão visível
+      rotulo.addEventListener('click', function (evento) {
+        evento.preventDefault();
+        botao.focus();
+      });
+    }
+    wrap.appendChild(botao);
+
+    var painel = document.createElement('div');
+    painel.className = 'data-custom-painel';
+    painel.innerHTML =
+      '<div class="data-custom-topo">' +
+        '<button type="button" data-mes="-1" aria-label="Mês anterior">‹</button>' +
+        '<strong aria-live="polite"></strong>' +
+        '<button type="button" data-mes="1" aria-label="Próximo mês">›</button>' +
+      '</div>' +
+      '<div class="data-custom-semana">' +
+        DIAS_SEMANA.map(function (d) { return '<span>' + d + '</span>'; }).join('') +
+      '</div>' +
+      '<div class="data-custom-dias"></div>' +
+      '<div class="data-custom-rodape"><button type="button" data-hoje>Hoje</button></div>';
+    wrap.appendChild(painel);
+
+    var titulo = painel.querySelector('strong');
+    var grade = painel.querySelector('.data-custom-dias');
+    var ativo = null;   // dia destacado no calendário (navegação pelo teclado)
+
+    function permitido(d) {
+      var min = deISO(input.getAttribute('min'));
+      var max = deISO(input.getAttribute('max'));
+      return !(min && d < min) && !(max && d > max);
+    }
+
+    function desenhar() {
+      var ano = ativo.getFullYear(), mes = ativo.getMonth();
+      titulo.textContent = MESES[mes] + ' de ' + ano;
+      grade.innerHTML = '';
+      var hoje = paraISO(new Date());
+      var primeiro = new Date(ano, mes, 1);
+      // 6 semanas fixas, começando no domingo antes (ou no) dia 1
+      for (var i = 0; i < 42; i++) {
+        var dia = new Date(ano, mes, 1 - primeiro.getDay() + i);
+        var iso = paraISO(dia);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = dia.getDate();
+        b.dataset.data = iso;
+        b.classList.toggle('fora', dia.getMonth() !== mes);
+        b.classList.toggle('escolhido', iso === input.value);
+        b.classList.toggle('hoje', iso === hoje);
+        b.classList.toggle('ativo', iso === paraISO(ativo));
+        b.disabled = !permitido(dia);
+        grade.appendChild(b);
+      }
+    }
+
+    function atualizar() {
+      var d = deISO(input.value);
+      botao.textContent = d ? d.toLocaleDateString('pt-BR') : 'dd/mm/aaaa';
+      botao.classList.toggle('vazio', !d);
+    }
+
+    function escolher(d) {
+      if (!permitido(d)) { return; }
+      input.value = paraISO(d);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      wrap.classList.remove('open');
+      botao.focus();
+    }
+
+    function abrir() {
+      fecharSelects(wrap);
+      ativo = semHora(deISO(input.value) || new Date());
+      desenhar();
+      wrap.classList.add('open');
+    }
+
+    function moverDias(n) {
+      ativo = new Date(ativo.getFullYear(), ativo.getMonth(), ativo.getDate() + n);
+      desenhar();
+    }
+
+    // troca de mês mantendo o dia (31/jan → 28/fev, não 3/mar)
+    function moverMeses(n) {
+      var ultimoDia = new Date(ativo.getFullYear(), ativo.getMonth() + n + 1, 0).getDate();
+      ativo = new Date(ativo.getFullYear(), ativo.getMonth() + n, Math.min(ativo.getDate(), ultimoDia));
+      desenhar();
+    }
+
+    botao.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      if (wrap.classList.contains('open')) {
+        wrap.classList.remove('open');
+      } else {
+        abrir();
+      }
+    });
+
+    var PASSOS = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+    botao.addEventListener('keydown', function (evento) {
+      var aberto = wrap.classList.contains('open');
+      if (!aberto) {
+        if (evento.key === 'ArrowDown') { evento.preventDefault(); abrir(); }
+        return;
+      }
+      if (PASSOS[evento.key]) {
+        evento.preventDefault();
+        moverDias(PASSOS[evento.key]);
+      } else if (evento.key === 'PageUp' || evento.key === 'PageDown') {
+        evento.preventDefault();
+        moverMeses(evento.key === 'PageUp' ? -1 : 1);
+      } else if (evento.key === 'Enter' || evento.key === ' ') {
+        evento.preventDefault();
+        escolher(ativo);
+      } else if (evento.key === 'Escape' || evento.key === 'Tab') {
+        wrap.classList.remove('open');
+      }
+    });
+
+    // o foco fica no botão do campo enquanto se clica no calendário
+    painel.addEventListener('mousedown', function (evento) { evento.preventDefault(); });
+    painel.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      var alvo = evento.target.closest('button');
+      if (!alvo || alvo.disabled) { return; }
+      if (alvo.dataset.mes) {
+        moverMeses(+alvo.dataset.mes);
+      } else if (alvo.hasAttribute('data-hoje')) {
+        escolher(semHora(new Date()));
+      } else if (alvo.dataset.data) {
+        escolher(deISO(alvo.dataset.data));
+      }
+    });
+
+    input.addEventListener('invalid', function () { botao.focus(); });
+    input.addEventListener('change', atualizar);
+    if (input.form) {
+      input.form.addEventListener('reset', function () { setTimeout(atualizar, 0); });
+    }
+    atualizar();
+  });
+
   document.addEventListener('click', function () { fecharSelects(null); });
 
   // Tabelas que viram cards no celular: copia o nome de cada coluna para

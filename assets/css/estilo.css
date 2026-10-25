@@ -231,6 +231,44 @@ a{ color: var(--roxo); text-decoration:none; }
 .select-custom-lista li[aria-selected="true"]{ color: var(--roxo); font-weight:600; }
 .select-custom-lista li[aria-disabled="true"]{ color: var(--texto-secundario); background:none; }
 
+/* Calendário feito em HTML (interface.js) no lugar do nativo dos campos de
+   data, pelo mesmo motivo. O <input type="date"> real fica por baixo. */
+.data-custom{ display:inline-block; }
+.data-custom input{ position:absolute; inset:0; opacity:0; pointer-events:none; }
+.data-custom-trigger{
+  min-width:160px; text-align:left; border:1px solid var(--linha); background:var(--branco);
+  padding:11px 38px 11px 13px; border-radius: var(--radius-sm); font-size:14px; color:var(--texto);
+  position:relative; min-height:43px;
+}
+.data-custom-trigger.vazio{ color: var(--texto-secundario); }
+.data-custom-trigger::after{
+  content:''; position:absolute; right:13px; top:50%; width:16px; height:16px; transform:translateY(-50%);
+  background: var(--texto-secundario);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Crect x='3' y='4.5' width='14' height='12.5' rx='2'/%3E%3Cpath d='M3 8.5h14M7 2.5v4M13 2.5v4'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Crect x='3' y='4.5' width='14' height='12.5' rx='2'/%3E%3Cpath d='M3 8.5h14M7 2.5v4M13 2.5v4'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.data-custom-trigger:focus{ outline:2px solid var(--roxo-claro); outline-offset:1px; border-color: var(--roxo-claro); }
+.data-custom-painel{
+  display:none; position:absolute; left:0; top:calc(100% + 6px); z-index:40; width:272px; padding:12px;
+  background:var(--branco); border:1px solid var(--linha); border-radius: var(--radius-sm); box-shadow: var(--sombra-forte);
+}
+.data-custom.open .data-custom-painel{ display:block; }
+.data-custom-topo{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.data-custom-topo strong{ font-size:14px; }
+.data-custom-topo button{ width:32px; height:32px; border-radius:8px; background:none; color:var(--texto); font-size:20px; line-height:1; }
+.data-custom-topo button:hover{ background: var(--lavanda); }
+.data-custom-semana, .data-custom-dias{ display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; text-align:center; }
+.data-custom-semana span{ font-size:11px; font-weight:700; color:var(--texto-secundario); padding:4px 0; }
+.data-custom-dias button{ height:34px; border-radius:8px; background:none; color:var(--texto); font-size:13px; }
+.data-custom-dias button:hover, .data-custom-dias button.ativo{ background: var(--lavanda); }
+.data-custom-dias button.fora{ color: var(--texto-secundario); opacity:.6; }
+.data-custom-dias button.hoje{ box-shadow: inset 0 0 0 1px var(--roxo-claro); }
+.data-custom-dias button.escolhido{ background: var(--gradiente); color:#fff; font-weight:700; opacity:1; }
+.data-custom-dias button:disabled{ opacity:.3; background:none; }
+.data-custom-rodape{ display:flex; justify-content:flex-end; margin-top:8px; padding-top:8px; border-top:1px solid var(--linha); }
+.data-custom-rodape button{ background:none; color:var(--roxo); font-weight:600; font-size:12.5px; padding:6px 10px; border-radius:8px; }
+.data-custom-rodape button:hover{ background: var(--lavanda); }
+
 button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
 .btn{
   border:1px solid transparent; background: var(--gradiente); color:#fff;
