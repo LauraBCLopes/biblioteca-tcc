@@ -148,6 +148,132 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // Listas suspensas dos formulários (.field select): a lista nativa do
+  // navegador é desenhada fora da página e ignora o cursor personalizado,
+  // então ela é trocada por uma lista feita em HTML. O <select> original
+  // continua no formulário (escondido), recebendo o valor escolhido — o
+  // envio e a validação de "campo obrigatório" seguem iguais. Só quando o
+  // cursor próprio está ligado (veja abaixo); no celular fica a lista nativa.
+  var usaCursorProprio = window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function fecharSelects(exceto) {
+    document.querySelectorAll('.select-custom.open').forEach(function (aberto) {
+      if (aberto !== exceto) { aberto.classList.remove('open'); }
+    });
+  }
+
+  (usaCursorProprio ? document.querySelectorAll('.field select') : []).forEach(function (select) {
+    var wrap = document.createElement('div');
+    wrap.className = 'select-custom';
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+    select.tabIndex = -1;
+
+    var botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'select-custom-trigger';
+    botao.setAttribute('aria-haspopup', 'listbox');
+    var rotulo = select.closest('.field').querySelector('label');
+    if (rotulo) { botao.setAttribute('aria-label', rotulo.textContent.trim()); }
+    wrap.appendChild(botao);
+
+    var lista = document.createElement('ul');
+    lista.className = 'select-custom-lista';
+    lista.setAttribute('role', 'listbox');
+    wrap.appendChild(lista);
+
+    var itens = Array.prototype.map.call(select.options, function (opcao, i) {
+      var item = document.createElement('li');
+      item.setAttribute('role', 'option');
+      item.textContent = opcao.textContent.trim();
+      if (opcao.disabled) { item.setAttribute('aria-disabled', 'true'); }
+      item.addEventListener('mousedown', function (evento) { evento.preventDefault(); });
+      item.addEventListener('click', function () {
+        if (opcao.disabled) { return; }
+        escolher(i);
+        wrap.classList.remove('open');
+        botao.focus();
+      });
+      lista.appendChild(item);
+      return item;
+    });
+    var ativo = -1;
+
+    function atualizar() {
+      var escolhida = select.options[select.selectedIndex];
+      botao.textContent = escolhida ? escolhida.textContent.trim() : '';
+      botao.classList.toggle('vazio', !select.value);
+      itens.forEach(function (item, i) {
+        item.setAttribute('aria-selected', i === select.selectedIndex ? 'true' : 'false');
+      });
+    }
+
+    function escolher(i) {
+      if (select.selectedIndex === i) { return; }
+      select.selectedIndex = i;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function destacar(i) {
+      itens.forEach(function (item) { item.classList.remove('ativo'); });
+      ativo = i;
+      if (itens[i]) {
+        itens[i].classList.add('ativo');
+        itens[i].scrollIntoView({ block: 'nearest' });
+      }
+    }
+
+    function mover(passo) {
+      var i = ativo;
+      do { i += passo; } while (itens[i] && select.options[i].disabled);
+      if (itens[i]) { destacar(i); }
+    }
+
+    function abrir() {
+      fecharSelects(wrap);
+      wrap.classList.add('open');
+      destacar(select.selectedIndex);
+    }
+
+    botao.addEventListener('click', function (evento) {
+      evento.stopPropagation();
+      if (wrap.classList.contains('open')) {
+        wrap.classList.remove('open');
+      } else {
+        abrir();
+      }
+    });
+
+    botao.addEventListener('keydown', function (evento) {
+      var aberto = wrap.classList.contains('open');
+      if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+        evento.preventDefault();
+        if (!aberto) { abrir(); return; }
+        mover(evento.key === 'ArrowDown' ? 1 : -1);
+      } else if ((evento.key === 'Enter' || evento.key === ' ') && aberto) {
+        evento.preventDefault();
+        if (itens[ativo] && !select.options[ativo].disabled) { escolher(ativo); }
+        wrap.classList.remove('open');
+      } else if (evento.key === 'Escape' || evento.key === 'Tab') {
+        wrap.classList.remove('open');
+      }
+    });
+
+    lista.addEventListener('click', function (evento) { evento.stopPropagation(); });
+
+    // campo obrigatório vazio: o aviso do navegador aparece no <select>
+    // escondido, então o destaque vai para o botão visível
+    select.addEventListener('invalid', function () { botao.focus(); });
+    select.addEventListener('change', atualizar);
+    if (select.form) {
+      select.form.addEventListener('reset', function () { setTimeout(atualizar, 0); });
+    }
+    atualizar();
+  });
+
+  document.addEventListener('click', function () { fecharSelects(null); });
+
   // Tabelas que viram cards no celular: copia o nome de cada coluna para
   // as células (data-label), que o CSS mostra ao lado do valor.
   document.querySelectorAll('.tabela-cartoes table').forEach(function (tabela) {
@@ -210,8 +336,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // estica na direção do movimento (como uma gota), voltando a ficar redondo
   // quando para. Só em aparelho com mouse (no celular
   // não existe cursor) e respeitando quem pediu menos animação no sistema.
-  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
-      !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (usaCursorProprio) {
     var raizCursor = document.documentElement;
     var borrao = document.createElement('div');
     borrao.className = 'cursor-borrao';
@@ -222,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var mouseX = -100, mouseY = -100, borraoX = -100, borraoY = -100;
     var velX = 0, velY = 0, angulo = 0;
     var MOLA = 0.2, ATRITO = 0.68;   // mola mais forte = segue mais rápido; atrito menor = balança mais
-    var SELETOR_CLICAVEL = 'a, button, label, select, summary, [role="button"], input[type="checkbox"], input[type="radio"], input[type="submit"]';
+    var SELETOR_CLICAVEL = 'a, button, label, select, summary, [role="button"], [role="option"]:not([aria-disabled="true"]), input[type="checkbox"], input[type="radio"], input[type="submit"]';
 
     document.addEventListener('mousemove', function (evento) {
       mouseX = evento.clientX;

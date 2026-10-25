@@ -202,6 +202,35 @@ a{ color: var(--roxo); text-decoration:none; }
 .senha-aviso.ok{ color: var(--ok); }
 .senha-aviso[hidden]{ display:none; }
 
+/* Lista suspensa feita em HTML (interface.js) no lugar da nativa, que é
+   desenhada fora da página e mostraria a seta do sistema em vez do cursor
+   "blurry dot". O <select> real fica por baixo, invisível. */
+.select-custom{ position:relative; }
+.select-custom select{ position:absolute; inset:0; opacity:0; pointer-events:none; }
+.select-custom-trigger{
+  width:100%; text-align:left; border:1px solid var(--linha); background:var(--branco);
+  padding:11px 36px 11px 13px; border-radius: var(--radius-sm); font-size:14px; color:var(--texto);
+  position:relative; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-height:43px;
+}
+.select-custom-trigger.vazio{ color: var(--texto-secundario); }
+.select-custom-trigger::after{
+  content:''; position:absolute; right:15px; top:50%; width:7px; height:7px;
+  border-right:2px solid var(--texto-secundario); border-bottom:2px solid var(--texto-secundario);
+  transform: translateY(-70%) rotate(45deg); transition: transform .15s;
+}
+.select-custom.open .select-custom-trigger::after{ transform: translateY(-30%) rotate(-135deg); }
+.select-custom-trigger:focus{ outline:2px solid var(--roxo-claro); outline-offset:1px; border-color: var(--roxo-claro); }
+.select-custom-lista{
+  display:none; position:absolute; left:0; right:0; top:calc(100% + 6px); z-index:40;
+  list-style:none; margin:0; padding:6px; max-height:260px; overflow-y:auto;
+  background:var(--branco); border:1px solid var(--linha); border-radius: var(--radius-sm); box-shadow: var(--sombra-forte);
+}
+.select-custom.open .select-custom-lista{ display:block; }
+.select-custom-lista li{ padding:9px 11px; border-radius:8px; font-size:13.5px; color:var(--texto); }
+.select-custom-lista li.ativo, .select-custom-lista li:hover{ background: var(--lavanda); }
+.select-custom-lista li[aria-selected="true"]{ color: var(--roxo); font-weight:600; }
+.select-custom-lista li[aria-disabled="true"]{ color: var(--texto-secundario); background:none; }
+
 button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
 .btn{
   border:1px solid transparent; background: var(--gradiente); color:#fff;
