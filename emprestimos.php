@@ -242,17 +242,58 @@ if (!empty($_GET['desfazer_devolucao'])) {
     exit;
 }
 
-/** Aplica de fato a renovação (+7 dias, zera a solicitação, soma 1 no contador). Devolve o novo prazo. */
-function aplicarRenovacao(PDO $pdo, int $idRenovar, string $dataPrevistaAtual): string
+/**
+ * Aplica de fato a renovação (+7 dias, zera a solicitação, soma 1 no contador).
+ * Empréstimo atrasado (só o admin renova): os 7 dias contam a partir de hoje —
+ * somar ao prazo vencido daria uma data que já passou —, ele volta a ficar em
+ * dia e o leitor é desbloqueado se não tiver outro atraso.
+ * Devolve ['nova_prevista' => 'AAAA-MM-DD', 'leitor_desbloqueado' => bool].
+ */
+function aplicarRenovacao(PDO $pdo, array $emprestimo): array
 {
-    // nova data calculada no PHP (não em SQL) para funcionar igual em MySQL e Postgres
-    $novaPrevista = date('Y-m-d', strtotime($dataPrevistaAtual . ' +7 days'));
+    // datas calculadas no PHP (não em SQL) para funcionar igual em MySQL e Postgres
+    $hoje = date('Y-m-d');
+    $prevista = substr($emprestimo['data_prevista'], 0, 10);
+    $novaPrevista = date('Y-m-d', strtotime(max($prevista, $hoje) . ' +7 days'));
+    $leitorDesbloqueado = false;
 
-    $stmt = $pdo->prepare('UPDATE emprestimos
-        SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1, renovacao_solicitada = FALSE
-        WHERE id = :id');
-    $stmt->execute(['nova_prevista' => $novaPrevista, 'id' => $idRenovar]);
-    return $novaPrevista;
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("UPDATE emprestimos
+            SET data_prevista = :nova_prevista, renovacoes = renovacoes + 1, renovacao_solicitada = FALSE,
+                status = 'ativo'
+            WHERE id = :id");
+        $stmt->execute(['nova_prevista' => $novaPrevista, 'id' => $emprestimo['id']]);
+
+        if ($emprestimo['status'] === 'atrasado') {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM emprestimos
+                WHERE leitor_id = :leitor_id AND id != :id AND status = 'atrasado'");
+            $stmt->execute(['leitor_id' => $emprestimo['leitor_id'], 'id' => $emprestimo['id']]);
+            if ($stmt->fetchColumn() == 0) {
+                $stmt = $pdo->prepare("UPDATE leitores SET status = 'ativo' WHERE id = :id AND status = 'bloqueado'");
+                $stmt->execute(['id' => $emprestimo['leitor_id']]);
+                $leitorDesbloqueado = $stmt->rowCount() > 0;
+            }
+        }
+
+        $pdo->commit();
+    } catch (Throwable $ex) {
+        $pdo->rollBack();
+        throw $ex;
+    }
+
+    return ['nova_prevista' => $novaPrevista, 'leitor_desbloqueado' => $leitorDesbloqueado];
+}
+
+/** Mensagem depois de renovar, com o novo prazo (e o desbloqueio, se houve). */
+function mensagemRenovacao(string $inicio, array $emprestimo, array $resultado): string
+{
+    $msg = $inicio . ' Novo prazo: ' . date('d/m/Y', strtotime($resultado['nova_prevista']))
+         . ($emprestimo['status'] === 'atrasado' ? ' (7 dias a partir de hoje, pois estava atrasado).' : '.');
+    if ($resultado['leitor_desbloqueado']) {
+        $msg .= ' O leitor foi desbloqueado.';
+    }
+    return $msg;
 }
 
 // Por quanto tempo depois de renovar (ou pedir renovação) ainda dá para desfazer (em segundos).
@@ -263,16 +304,18 @@ const PRAZO_DESFAZER_RENOVACAO = 600;
  * para o botão "Desfazer" e devolve a ação que vai junto na mensagem.
  * $tipo: 'renovacao' (prazo já estendido) ou 'solicitacao' (aluno só pediu).
  */
-function guardarDesfazerRenovacao(array $emprestimo, string $tipo, ?string $novaPrevista = null): array
+function guardarDesfazerRenovacao(array $emprestimo, string $tipo, array $resultado = []): array
 {
     $_SESSION['ultima_renovacao'] = [
-        'id'            => (int) $emprestimo['id'],
-        'tipo'          => $tipo,
-        'prevista'      => substr($emprestimo['data_prevista'], 0, 10),
-        'nova_prevista' => $novaPrevista,
-        'renovacoes'    => (int) $emprestimo['renovacoes'],
-        'solicitada'    => bdBool($emprestimo['renovacao_solicitada']),
-        'em'            => time(),
+        'id'                  => (int) $emprestimo['id'],
+        'tipo'                => $tipo,
+        'status'              => $emprestimo['status'],
+        'prevista'            => substr($emprestimo['data_prevista'], 0, 10),
+        'nova_prevista'       => $resultado['nova_prevista'] ?? null,
+        'renovacoes'          => (int) $emprestimo['renovacoes'],
+        'solicitada'          => bdBool($emprestimo['renovacao_solicitada']),
+        'leitor_desbloqueado' => !empty($resultado['leitor_desbloqueado']),
+        'em'                  => time(),
     ];
     return ['texto' => 'Desfazer', 'url' => 'emprestimos.php?desfazer_renovacao=' . (int) $emprestimo['id']];
 }
@@ -309,8 +352,9 @@ if (!empty($_GET['renovar'])) {
         header('Location: emprestimos.php');
         exit;
     }
-    if ($emprestimo['status'] === 'atrasado') {
-        flash('Empréstimos atrasados não podem ser renovados. Registre a devolução.', 'erro');
+    // aluno só pede renovação antes de vencer; depois do prazo, só a biblioteca renova
+    if ($emprestimo['status'] === 'atrasado' && !isAdmin()) {
+        flash('Este empréstimo já passou do prazo: só a biblioteca pode renová-lo.', 'erro');
         header('Location: emprestimos.php');
         exit;
     }
@@ -322,9 +366,9 @@ if (!empty($_GET['renovar'])) {
 
     if (isAdmin()) {
         // administrador renova direto (já está aprovando ao fazer isso)
-        $novaPrevista = aplicarRenovacao($pdo, $idRenovar, $emprestimo['data_prevista']);
-        flash('Empréstimo renovado por mais 7 dias.', 'ok',
-              guardarDesfazerRenovacao($emprestimo, 'renovacao', $novaPrevista));
+        $resultado = aplicarRenovacao($pdo, $emprestimo);
+        flash(mensagemRenovacao('Empréstimo renovado.', $emprestimo, $resultado), 'ok',
+              guardarDesfazerRenovacao($emprestimo, 'renovacao', $resultado));
     } else {
         if (temReservaConcorrente($pdo, (int) $emprestimo['livro_id'], (int) $emprestimo['leitor_id'])) {
             flash('Não é possível solicitar renovação: outro leitor está na fila de reserva deste livro.', 'erro');
@@ -357,9 +401,19 @@ if (!empty($_GET['aprovar_renovacao']) || !empty($_GET['recusar_renovacao'])) {
     }
 
     if (!empty($_GET['aprovar_renovacao'])) {
-        $novaPrevista = aplicarRenovacao($pdo, $idSolicitacao, $emprestimo['data_prevista']);
-        flash('Renovação aprovada: novo prazo de mais 7 dias.', 'ok',
-              guardarDesfazerRenovacao($emprestimo, 'renovacao', $novaPrevista));
+        if ($emprestimo['status'] === 'devolvido') {
+            flash('Este empréstimo já foi devolvido.', 'erro');
+            header('Location: emprestimos.php');
+            exit;
+        }
+        if ((int) $emprestimo['renovacoes'] >= 2) {
+            flash('Limite de 2 renovações já atingido para este empréstimo.', 'erro');
+            header('Location: emprestimos.php');
+            exit;
+        }
+        $resultado = aplicarRenovacao($pdo, $emprestimo);
+        flash(mensagemRenovacao('Renovação aprovada.', $emprestimo, $resultado), 'ok',
+              guardarDesfazerRenovacao($emprestimo, 'renovacao', $resultado));
     } else {
         $stmt = $pdo->prepare('UPDATE emprestimos SET renovacao_solicitada = FALSE WHERE id = :id');
         $stmt->execute(['id' => $idSolicitacao]);
@@ -409,17 +463,27 @@ if (!empty($_GET['desfazer_renovacao'])) {
                 || (int) $emprestimo['renovacoes'] !== $ultima['renovacoes'] + 1) {
                 throw new RuntimeException('Não dá para desfazer: o prazo deste empréstimo mudou depois da renovação.');
             }
-            // se veio de um pedido do aluno, o pedido volta a aguardar aprovação
+            // volta tudo: prazo, contador, situação (atrasado) e, se veio de um
+            // pedido do aluno, o pedido volta a aguardar aprovação
             $stmt = $pdo->prepare('UPDATE emprestimos
-                SET data_prevista = :prevista, renovacoes = :renovacoes, renovacao_solicitada = :solicitada
+                SET data_prevista = :prevista, renovacoes = :renovacoes, renovacao_solicitada = :solicitada,
+                    status = :status
                 WHERE id = :id');
             $stmt->execute([
                 'prevista'   => $ultima['prevista'],
                 'renovacoes' => $ultima['renovacoes'],
                 'solicitada' => $ultima['solicitada'] ? 1 : 0,
+                'status'     => $ultima['status'],
                 'id'         => $idDesfazer,
             ]);
+            // se a renovação tinha desbloqueado o leitor, volta a bloquear
+            if (!empty($ultima['leitor_desbloqueado'])) {
+                $stmt = $pdo->prepare("UPDATE leitores SET status = 'bloqueado' WHERE id = :id");
+                $stmt->execute(['id' => $emprestimo['leitor_id']]);
+            }
             $mensagem = 'Renovação desfeita: o prazo voltou para ' . date('d/m/Y', strtotime($ultima['prevista'])) . '.'
+                      . ($ultima['status'] === 'atrasado' ? ' O empréstimo voltou a constar como atrasado.' : '')
+                      . (!empty($ultima['leitor_desbloqueado']) ? ' O leitor foi bloqueado de novo.' : '')
                       . ($ultima['solicitada'] ? ' O pedido do aluno voltou a aguardar aprovação.' : '');
         }
 
@@ -659,7 +723,10 @@ require __DIR__ . '/includes/layout_topo.php';
             </div></td></tr>
           <?php else: foreach ($emprestimos as $e):
               $sl = $SITUACAO_LABEL[$e['situacao']];
-              $podeRenovar = !in_array($e['situacao'], ['atrasado', 'devolvido']) && (int) $e['renovacoes'] < 2;
+              // atrasado: só o admin renova (o aluno pede só antes de vencer)
+              $podeRenovar = $e['situacao'] !== 'devolvido'
+                  && ($e['situacao'] !== 'atrasado' || isAdmin())
+                  && (int) $e['renovacoes'] < 2;
           ?>
             <tr id="emprestimo-<?= (int) $e['id'] ?>">
               <td><strong><?= e($e['livro_titulo']) ?></strong><br><span class="mono" style="color:var(--texto-secundario);font-size:11.5px;"><?= e($e['livro_codigo']) ?></span></td>
