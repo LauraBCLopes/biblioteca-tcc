@@ -297,6 +297,9 @@ button, .btn{ font-family:'Inter', sans-serif; cursor:pointer; border:none; }
 /* ---------- Layout interno (app) ---------- */
 .app{ display:grid; grid-template-columns: 250px 1fr; min-height:100vh; }
 @media (max-width: 900px){ .app{ grid-template-columns: 1fr; } }
+/* sem isto, algo largo lá dentro (tabela, gráfico) estica a coluna e a
+   página inteira passa da largura da tela no celular */
+.main-wrap{ min-width:0; }
 
 .sidebar{
   background: linear-gradient(180deg, var(--branco), var(--sidebar-fim));
@@ -444,6 +447,9 @@ tbody tr:hover{ background: var(--fundo); }
   .tabela-cartoes tbody td:last-child .btn{ flex:1 1 auto; }
   .tabela-cartoes tbody td[colspan]{ display:block; }
   .tabela-cartoes tbody td[colspan]::before{ display:none; }
+  /* tabela sem coluna de botões: a última célula é um dado comum */
+  .tabela-cartoes.sem-acoes tbody td:last-child{ justify-content:flex-end; padding-top:9px; }
+  .tabela-cartoes.sem-acoes tbody td:last-child::before{ display:inline; }
 }
 
 /* ---------- Dashboard ---------- */
@@ -517,6 +523,22 @@ tbody tr:hover{ background: var(--fundo); }
 .pdf-botoes{ display:flex; gap:8px; flex-wrap:wrap; }
 .pdf-aviso{ margin:12px 0 0; font-size:12.5px; color: var(--ok); }
 .pdf-aviso.erro{ color: var(--alerta); }
+
+/* Relatórios no celular: período em uma linha com o botão embaixo, números
+   dos cards um pouco menores e nomes longos quebrando em vez de vazar */
+.bar-row .rotulo{ overflow-wrap:anywhere; }
+.attention-item > span:first-child{ min-width:0; overflow-wrap:anywhere; }
+@media (max-width: 600px){
+  .periodo-form .field{ flex:1 1 140px; }
+  .periodo-form .field input{ font-size:16px; }
+  .periodo-form .btn{ width:100%; padding:12px 18px; }
+  .pdf-botoes .btn{ flex:1 1 calc(50% - 4px); }
+  .stat-grid{ gap:12px; }
+  .stat-card{ padding:14px 14px; }
+  .stat-card .valor{ font-size:24px; }
+  .dash-row{ gap:16px; }
+  .dash-row > .panel{ padding:16px; }
+}
 
 /* Gráfico de colunas agrupadas (empréstimos x devoluções por mês) */
 .legenda{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--texto-secundario); margin-bottom:14px; }

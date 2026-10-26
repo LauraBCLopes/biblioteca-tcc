@@ -324,7 +324,7 @@ require __DIR__ . '/includes/layout_topo.php';
       <?php endforeach; ?>
     </div>
 
-    <form method="get" action="relatorios.php"
+    <form method="get" action="relatorios.php" class="periodo-form"
           style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:22px;">
       <input type="hidden" name="periodo" value="personalizado">
       <div class="field" style="margin-bottom:0;">
@@ -553,7 +553,7 @@ require __DIR__ . '/includes/layout_topo.php';
         <p class="text-muted" style="font-size:13px;margin:0;">Nenhum empréstimo em atraso no momento.</p>
       </div>
     <?php else: ?>
-      <div class="table-wrap" style="margin-bottom:24px;">
+      <div class="table-wrap tabela-cartoes sem-acoes" style="margin-bottom:24px;">
         <table>
           <thead>
             <tr>
