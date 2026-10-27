@@ -4,7 +4,8 @@
 // de resumo, observações em texto, legenda das siglas e "cidade, data".
 // Busca os dados em relatorios.php?dados_pdf=1 (JSON) e monta o PDF aqui no
 // navegador com a jsPDF + AutoTable (assets/js/vendor) — funciona igual no
-// XAMPP e na Vercel.
+// XAMPP e na Vercel. Antes de baixar, o PDF é mostrado numa pré-visualização
+// (<dialog id="pdf-previa"> em relatorios.php).
 document.addEventListener('DOMContentLoaded', function () {
   var painel = document.querySelector('.pdf-painel');
   if (!painel) { return; }
@@ -317,6 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
     doc.text('Responsável pela biblioteca', L / 2, ya + 4.5, { align: 'center' });
   }
 
+  // monta o documento e devolve { doc, arquivo, titulo }; quem chama decide se mostra ou baixa
   function gerarPdf(tipo, dados) {
     var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     var tipos = tipo === 'completo' ? ['abertos', 'atrasados', 'livros', 'leitores'] : [tipo];
@@ -325,12 +327,52 @@ document.addEventListener('DOMContentLoaded', function () {
       formulario(doc, dados, RELATORIOS[t](dados));
     });
     rodapes(doc);
+    var titulo = tipo === 'completo' ? 'Relatório geral' : RELATORIOS[tipo](dados).titulo;
     doc.setProperties({
-      title: limpar('Bibliotech - ' + (tipo === 'completo' ? 'Relatório geral' : RELATORIOS[tipo](dados).titulo)),
+      title: limpar('Bibliotech - ' + titulo),
       author: limpar(dados.emitido_por || 'Bibliotech')
     });
-    doc.save(NOMES_ARQUIVO[tipo] + '-' + hojeIso() + '.pdf');
+    return { doc: doc, arquivo: NOMES_ARQUIVO[tipo] + '-' + hojeIso() + '.pdf', titulo: titulo };
   }
+
+  // ---------- pré-visualização ----------
+  // O PDF aparece numa janela dentro da página; só vai para os downloads se
+  // o admin clicar em "Baixar PDF".
+  var previa = document.getElementById('pdf-previa');
+  var previaTitulo = previa.querySelector('.pdf-previa-titulo');
+  var previaQuadro = previa.querySelector('iframe');
+  var previaAbrir = previa.querySelector('[data-pdf-abrir]');
+  var atual = null;   // { doc, arquivo, titulo, url }
+
+  function abrirPrevia(pdf) {
+    fecharPrevia();
+    pdf.url = URL.createObjectURL(pdf.doc.output('blob'));
+    atual = pdf;
+    previaTitulo.textContent = pdf.titulo;
+    previaQuadro.src = pdf.url;
+    previaAbrir.href = pdf.url;
+    previa.showModal();
+  }
+
+  function fecharPrevia() {
+    if (previa.open) { previa.close(); }
+  }
+
+  previa.addEventListener('close', function () {
+    previaQuadro.src = 'about:blank';
+    if (atual) { URL.revokeObjectURL(atual.url); atual = null; }
+  });
+  previa.querySelector('[data-pdf-fechar]').addEventListener('click', fecharPrevia);
+  previa.querySelector('[data-pdf-baixar]').addEventListener('click', function () {
+    if (!atual) { return; }
+    atual.doc.save(atual.arquivo);
+    fecharPrevia();
+    mostrarAviso('PDF baixado. Confira a pasta de downloads.', false);
+  });
+  // clique no fundo escuro fecha
+  previa.addEventListener('click', function (ev) {
+    if (ev.target === previa) { fecharPrevia(); }
+  });
 
   // ---------- botões ----------
   function mostrarAviso(texto, erro) {
@@ -357,8 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return resposta.json();
         })
         .then(function (dados) {
-          gerarPdf(botao.dataset.pdf, dados);
-          mostrarAviso('PDF gerado. Confira a pasta de downloads.', false);
+          abrirPrevia(gerarPdf(botao.dataset.pdf, dados));
         })
         .catch(function () {
           mostrarAviso('Não foi possível gerar o PDF agora. Verifique a conexão e tente de novo.', true);

@@ -523,6 +523,22 @@ tbody tr:hover{ background: var(--fundo); }
 .pdf-botoes{ display:flex; gap:8px; flex-wrap:wrap; }
 .pdf-aviso{ margin:12px 0 0; font-size:12.5px; color: var(--ok); }
 .pdf-aviso.erro{ color: var(--alerta); }
+/* pré-visualização do PDF antes de baixar */
+.pdf-previa{
+  width: min(960px, calc(100vw - 32px)); height: calc(100vh - 48px); max-height:none; padding:0;
+  background: var(--branco); color: var(--texto);
+  border: 1px solid var(--linha); border-radius: var(--radius); box-shadow: var(--sombra-forte);
+  overflow:hidden;
+}
+.pdf-previa[open]{ display:flex; flex-direction:column; animation: confirm-entra .15s ease-out; }
+.pdf-previa::backdrop{ background: rgba(15,18,38,0.55); }
+.pdf-previa-topo{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  padding:14px 18px; border-bottom:1px solid var(--linha);
+}
+.pdf-previa-titulo{ font-size:16px; margin:0; }
+.pdf-previa-acoes{ display:flex; gap:8px; flex-wrap:wrap; }
+.pdf-previa iframe{ flex:1; width:100%; border:0; background:#525659; }
 
 /* Relatórios no celular: período em uma linha com o botão embaixo, números
    dos cards um pouco menores e nomes longos quebrando em vez de vazar */

@@ -314,7 +314,7 @@ require __DIR__ . '/includes/layout_topo.php';
           até <strong><?= date('d/m/Y', strtotime($ate)) ?></strong>
         </p>
       </div>
-      <button type="button" class="btn primary small" data-pdf="completo">Baixar relatório em PDF</button>
+      <button type="button" class="btn primary small" data-pdf="completo">Ver relatório em PDF</button>
     </div>
 
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
@@ -339,8 +339,9 @@ require __DIR__ . '/includes/layout_topo.php';
     </form>
 
     <div class="panel pdf-painel" data-pdf-url="<?= e(urlRelatorio(['dados_pdf' => '1'])) ?>">
-      <h3>Baixar relatórios em PDF</h3>
+      <h3>Relatórios em PDF</h3>
       <p class="sub">
+        Clique em um relatório para visualizá-lo; o download só acontece se você escolher "Baixar PDF".
         Empréstimos em aberto e atrasos mostram a situação de hoje (<?= date('d/m/Y') ?>).
         Os totais por livro e por leitor contam tudo o que foi emprestado até
         <strong><?= date('d/m/Y', strtotime($ate)) ?></strong> (a data "Até" do período).
@@ -354,6 +355,18 @@ require __DIR__ . '/includes/layout_topo.php';
       </div>
       <p class="pdf-aviso" aria-live="polite" hidden></p>
     </div>
+
+    <dialog id="pdf-previa" class="pdf-previa" aria-labelledby="pdf-previa-titulo">
+      <div class="pdf-previa-topo">
+        <h3 id="pdf-previa-titulo" class="pdf-previa-titulo">Relatório</h3>
+        <div class="pdf-previa-acoes">
+          <a class="btn ghost small" data-pdf-abrir href="#" target="_blank" rel="noopener">Abrir em nova aba</a>
+          <button type="button" class="btn ghost small" data-pdf-fechar>Fechar</button>
+          <button type="button" class="btn primary small" data-pdf-baixar>Baixar PDF</button>
+        </div>
+      </div>
+      <iframe title="Pré-visualização do relatório" src="about:blank"></iframe>
+    </dialog>
 
     <div class="stat-grid">
       <div class="stat-card">
