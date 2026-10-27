@@ -445,6 +445,8 @@ tbody tr:hover{ background: var(--fundo); }
   .tabela-cartoes tbody td:last-child::before{ display:none; }
   .tabela-cartoes tbody td:not(:first-child) br{ display:none; }
   .tabela-cartoes tbody td:last-child .btn{ flex:1 1 auto; }
+  /* no card, os botões viram filhos diretos do flex da célula */
+  .tabela-cartoes .acoes-linha{ display:contents; }
   .tabela-cartoes tbody td[colspan]{ display:block; }
   .tabela-cartoes tbody td[colspan]::before{ display:none; }
   /* tabela sem coluna de botões: a última célula é um dado comum */
@@ -515,6 +517,9 @@ tbody tr:hover{ background: var(--fundo); }
 
 .panel-rodape{ margin-top:auto; padding-top:16px; display:flex; gap:10px; flex-wrap:wrap; }
 .vazio{ color:var(--texto-secundario); font-size:13px; }
+/* botões da coluna "Ações": o flex fica num <div> dentro do <td>, porque um
+   <td> com display:flex deixa de ser célula e desalinha as bordas da linha */
+.acoes-linha{ display:flex; gap:6px; flex-wrap:wrap; }
 
 .panel .sub{ font-size:12.5px; color:var(--texto-secundario); margin:-10px 0 16px; }
 /* Relatórios → Baixar relatórios em PDF (assets/js/relatorios-pdf.js) */

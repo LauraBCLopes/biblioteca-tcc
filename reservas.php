@@ -255,7 +255,7 @@ require __DIR__ . '/includes/layout_topo.php';
               <?php endif; ?>
               <td class="mono"><?= date('d/m/Y', strtotime($r['data_reserva'])) ?></td>
               <td><span class="badge <?= $sl['c'] ?>"><?= $sl['t'] ?></span></td>
-              <td style="display:flex; gap:6px; flex-wrap:wrap;">
+              <td><div class="acoes-linha">
                 <?php if ($r['status'] === 'pendente'): ?>
                   <?php if (isAdmin()): ?>
                     <?php if ($podeAtender): ?>
@@ -269,7 +269,7 @@ require __DIR__ . '/includes/layout_topo.php';
                      data-confirmar-titulo="Cancelar reserva"
                      data-confirmar-botao="Cancelar reserva">Cancelar</a>
                 <?php endif; ?>
-              </td>
+              </div></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>

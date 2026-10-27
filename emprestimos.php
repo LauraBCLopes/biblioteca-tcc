@@ -755,7 +755,7 @@ require __DIR__ . '/includes/layout_topo.php';
                 <?= (int) $e['renovacoes'] ?>/2
                 <?php if (bdBool($e['renovacao_solicitada'])): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
               </td>
-              <td style="display:flex; gap:6px; flex-wrap:wrap;">
+              <td><div class="acoes-linha">
                 <?php if ($e['status'] !== 'devolvido'): ?>
                   <?php if (isAdmin()): ?>
                     <?php if (bdBool($e['devolucao_solicitada'])): ?>
@@ -793,7 +793,7 @@ require __DIR__ . '/includes/layout_topo.php';
                     <?php endif; ?>
                   <?php endif; ?>
                 <?php endif; ?>
-              </td>
+              </div></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>

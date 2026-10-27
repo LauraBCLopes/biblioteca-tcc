@@ -312,7 +312,7 @@ require __DIR__ . '/includes/layout_topo.php';
                 <?php endif; ?>
               </td>
               <td class="mono" style="color:var(--texto-secundario);font-size:12px;"><?= date('d/m/Y', strtotime($u['data_cadastro'])) ?></td>
-              <td style="display:flex; gap:6px; flex-wrap:wrap;">
+              <td><div class="acoes-linha">
                 <a class="btn ghost small" href="?editar=<?= (int) $u['id'] ?>">Editar</a>
                 <a class="btn ghost small" href="?resetar_senha=<?= (int) $u['id'] ?>"
                    data-confirmar="Remover a senha atual de &quot;<?= e($u['nome']) ?>&quot;? O leitor vai precisar definir uma nova senha em Criar conta. Você poderá desfazer logo em seguida."
@@ -325,7 +325,7 @@ require __DIR__ . '/includes/layout_topo.php';
                    data-confirmar="Remover &quot;<?= e($u['nome']) ?>&quot; do cadastro de leitores?"
                    data-confirmar-titulo="Excluir leitor"
                    data-confirmar-botao="Excluir">Excluir</a>
-              </td>
+              </div></td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>
