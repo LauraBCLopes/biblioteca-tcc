@@ -365,7 +365,7 @@ require __DIR__ . '/includes/layout_topo.php';
           <button type="button" class="btn primary small" data-pdf-baixar>Baixar PDF</button>
         </div>
       </div>
-      <iframe title="Pré-visualização do relatório" src="about:blank"></iframe>
+      <div class="pdf-previa-paginas" aria-label="Pré-visualização do relatório"></div>
     </dialog>
 
     <div class="stat-grid">
@@ -602,5 +602,6 @@ require __DIR__ . '/includes/layout_topo.php';
 
 <script src="assets/js/vendor/jspdf.umd.min.js?v=2.5.1"></script>
 <script src="assets/js/vendor/jspdf.plugin.autotable.min.js?v=3.8.2"></script>
+<script src="assets/js/vendor/pdf.min.js?v=3.11.174"></script>
 <script src="assets/js/relatorios-pdf.js?v=<?= VERSAO_ASSETS ?>"></script>
 <?php require __DIR__ . '/includes/layout_rodape.php'; ?>

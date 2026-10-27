@@ -337,21 +337,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ---------- pré-visualização ----------
   // O PDF aparece numa janela dentro da página; só vai para os downloads se
-  // o admin clicar em "Baixar PDF".
+  // o admin clicar em "Baixar PDF". As páginas são desenhadas em <canvas>
+  // pela pdf.js (assets/js/vendor), e não num <iframe> com o leitor de PDF do
+  // navegador: assim o cursor personalizado continua valendo em cima delas e
+  // a prévia funciona também no celular.
   var previa = document.getElementById('pdf-previa');
   var previaTitulo = previa.querySelector('.pdf-previa-titulo');
-  var previaQuadro = previa.querySelector('iframe');
+  var previaPaginas = previa.querySelector('.pdf-previa-paginas');
   var previaAbrir = previa.querySelector('[data-pdf-abrir]');
   var atual = null;   // { doc, arquivo, titulo, url }
+
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/js/vendor/pdf.worker.min.js';
+  }
+
+  function desenharPaginas(pdf) {
+    previaPaginas.innerHTML = '<p class="pdf-previa-carregando">Carregando pré-visualização...</p>';
+    if (!window.pdfjsLib) {
+      previaPaginas.innerHTML = '<p class="pdf-previa-carregando">Não foi possível mostrar a prévia aqui. Use "Abrir em nova aba" ou "Baixar PDF".</p>';
+      return;
+    }
+    window.pdfjsLib.getDocument({ data: pdf.doc.output('arraybuffer') }).promise
+      .then(function (arquivo) {
+        if (atual !== pdf) { return; }   // a janela foi fechada ou trocada no meio
+        previaPaginas.innerHTML = '';
+        var largura = Math.min(previaPaginas.clientWidth - 32, 820);
+        var nitidez = window.devicePixelRatio || 1;
+        var fila = Promise.resolve();
+        for (var n = 1; n <= arquivo.numPages; n++) {
+          fila = fila.then(desenharPagina.bind(null, arquivo, n, pdf, largura, nitidez));
+        }
+        return fila;
+      })
+      .catch(function () {
+        if (atual === pdf) {
+          previaPaginas.innerHTML = '<p class="pdf-previa-carregando">Não foi possível mostrar a prévia aqui. Use "Abrir em nova aba" ou "Baixar PDF".</p>';
+        }
+      });
+  }
+
+  function desenharPagina(arquivo, n, pdf, largura, nitidez) {
+    return arquivo.getPage(n).then(function (pagina) {
+      if (atual !== pdf) { return; }
+      var escala = largura / pagina.getViewport({ scale: 1 }).width;
+      var vista = pagina.getViewport({ scale: escala * nitidez });
+      var canvas = document.createElement('canvas');
+      canvas.width = vista.width;
+      canvas.height = vista.height;
+      canvas.style.width = largura + 'px';
+      canvas.setAttribute('aria-label', 'Página ' + n + ' de ' + arquivo.numPages);
+      previaPaginas.appendChild(canvas);
+      return pagina.render({ canvasContext: canvas.getContext('2d'), viewport: vista }).promise;
+    });
+  }
 
   function abrirPrevia(pdf) {
     fecharPrevia();
     pdf.url = URL.createObjectURL(pdf.doc.output('blob'));
     atual = pdf;
     previaTitulo.textContent = pdf.titulo;
-    previaQuadro.src = pdf.url;
     previaAbrir.href = pdf.url;
     previa.showModal();
+    previaPaginas.scrollTop = 0;
+    desenharPaginas(pdf);
   }
 
   function fecharPrevia() {
@@ -359,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   previa.addEventListener('close', function () {
-    previaQuadro.src = 'about:blank';
+    previaPaginas.innerHTML = '';
     if (atual) { URL.revokeObjectURL(atual.url); atual = null; }
   });
   previa.querySelector('[data-pdf-fechar]').addEventListener('click', fecharPrevia);

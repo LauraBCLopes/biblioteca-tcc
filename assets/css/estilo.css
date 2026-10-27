@@ -538,7 +538,12 @@ tbody tr:hover{ background: var(--fundo); }
 }
 .pdf-previa-titulo{ font-size:16px; margin:0; }
 .pdf-previa-acoes{ display:flex; gap:8px; flex-wrap:wrap; }
-.pdf-previa iframe{ flex:1; width:100%; border:0; background:#525659; }
+.pdf-previa-paginas{
+  flex:1; overflow:auto; padding:16px; background:#525659;
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+}
+.pdf-previa-paginas canvas{ max-width:100%; height:auto; background:#fff; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
+.pdf-previa-carregando{ color:#fff; font-size:13.5px; margin:24px 0; text-align:center; }
 
 /* Relatórios no celular: período em uma linha com o botão embaixo, números
    dos cards um pouco menores e nomes longos quebrando em vez de vazar */
