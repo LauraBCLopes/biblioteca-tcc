@@ -1,0 +1,16 @@
+# Não enviar ao Vercel: segredos e ferramentas locais
+.env
+.env.*
+!.env.example
+.claude/
+.agents/
+.mcp.json
+skills-lock.json
+.git/
+
+# sobras antigas (substituídas no commit 52bd74c), fora do limite de 12 funções
+leitor_bloqueio.php
+leitor_excluir.php
+leitor_salvar.php
+livro_excluir.php
+livro_salvar.php

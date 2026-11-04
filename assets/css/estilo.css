@@ -1,7 +1,7 @@
-/* fontes: Nunito (texto), Fraunces (títulos de destaque) e IBM Plex Mono — carregadas no <head> */
+/* fontes: Lato (texto), Oswald (títulos) e IBM Plex Mono — carregadas no <head> */
 
 :root{
-  --fonte: 'Nunito', 'Segoe UI', Arial, sans-serif;
+  --fonte: 'Lato', 'Segoe UI', Arial, sans-serif;
   --roxo: #3D3A8C;               /* botões e links principais */
   --roxo-claro: #9D8FE0;         /* anel de foco */
   --azul: #2A4F8F;
@@ -136,7 +136,7 @@ body{
   color: var(--texto);
   min-height: 100vh;
 }
-h1,h2,h3,h4{ font-family: var(--fonte); font-weight:800; margin:0; color: var(--texto); letter-spacing:-0.2px; }
+h1,h2,h3,h4{ font-family: var(--fonte-display, 'Oswald', sans-serif); font-weight:600; margin:0; color: var(--texto); letter-spacing:0.2px; }
 .mono{ font-family: 'IBM Plex Mono', monospace; }
 a{ color: var(--roxo); text-decoration:none; }
 .text-muted{ color: var(--texto-secundario); }
@@ -852,7 +852,7 @@ tbody tr:hover{ background: var(--fundo); }
    60fps) e botões/blocos de conversão (CTA.gallery).
    ===================================================================== */
 :root{
-  --fonte-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --fonte-display: 'Oswald', 'Arial Narrow', Impact, sans-serif;
   --ease-saida: cubic-bezier(.22, 1, .36, 1);   /* desacelera no fim: entrada suave */
   --ease-mola: cubic-bezier(.34, 1.56, .64, 1);  /* passa um pouco e volta: hover "vivo" */
   --dur-rapida: .18s;
@@ -876,9 +876,9 @@ tbody tr:hover{ background: var(--fundo); }
 
 /* ---------- Identidade: títulos de destaque em serifa editorial ---------- */
 .hero h2, .view-head h2, .login-card h1, .auth-frase h2, .cta-bloco h3{
-  font-family: var(--fonte-display); font-weight:700; letter-spacing:-0.5px;
+  font-family: var(--fonte-display); font-weight:700; letter-spacing:0.3px;
 }
-.auth-brand .brand-name{ font-family: var(--fonte-display); letter-spacing:-2px; }
+.auth-brand .brand-name{ font-family: var(--fonte-display); font-weight:700; letter-spacing:1px; }
 .view-head h2{ font-size:32px; line-height:1.1; }
 .view-head .eyebrow{ display:inline-flex; align-items:center; gap:8px; }
 .view-head .eyebrow::before{
@@ -965,7 +965,7 @@ tbody tr:hover{ background: var(--fundo); }
 }
 @keyframes pulso{ from{ transform:scale(1); opacity:.6; } to{ transform:scale(2.8); opacity:0; } }
 .hero h2{ font-size:40px; margin-top:14px; line-height:1.05; }
-.hero h2 em{ font-style:italic; color: var(--roxo); }
+.hero h2 em{ font-style:normal; color: var(--roxo); }
 .hero-ctas{ display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; }
 .hero-arte{ animation: flutuar 6s ease-in-out infinite; }
 @keyframes flutuar{ 50%{ transform: translateY(-8px) rotate(-1deg); } }
