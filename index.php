@@ -272,11 +272,20 @@ require __DIR__ . '/includes/layout_topo.php';
 
     <section class="hero">
       <div class="hero-texto">
-        <div class="hero-data mono">Hoje · <?= date('d/m/Y') ?></div>
-        <h2>Bem-vindo(a), <?= e($primeiroNome) ?>!</h2>
+        <span class="hero-chip"><span class="pulso" aria-hidden="true"></span><span class="mono">Hoje · <?= date('d/m/Y') ?></span></span>
+        <h2>Bem-vindo(a), <em><?= e($primeiroNome) ?></em>!</h2>
         <p><?= isAdmin()
               ? 'Gerencie o acervo, os empréstimos e mantenha o conhecimento sempre em movimento.'
               : 'Acompanhe seus empréstimos e reservas e descubra sua próxima leitura.' ?></p>
+        <div class="hero-ctas">
+          <?php if (isAdmin()): ?>
+            <a class="btn lg" href="emprestimos.php">Registrar empréstimo <span class="seta" aria-hidden="true">→</span></a>
+            <a class="btn lg claro" href="livros.php">Cadastrar livro</a>
+          <?php else: ?>
+            <a class="btn lg" href="livros.php">Explorar o acervo <span class="seta" aria-hidden="true">→</span></a>
+            <a class="btn lg claro" href="emprestimos.php">Meus empréstimos</a>
+          <?php endif; ?>
+        </div>
       </div>
 <svg class="hero-arte" viewBox="0 0 230 130" fill="none" aria-hidden="true">
         <rect x="20" y="104" width="190" height="22" rx="4" fill="#3F7FE8"/>
@@ -683,6 +692,17 @@ require __DIR__ . '/includes/layout_topo.php';
         </div>
       </div>
     </div>
+
+    <section class="cta-bloco">
+      <div>
+        <h3>Não achou o livro que queria?</h3>
+        <p>Reserve um título que está emprestado e entre na fila para ser o próximo a pegá-lo.</p>
+      </div>
+      <div class="cta-acoes">
+        <a class="btn lg" href="livros.php">Buscar e reservar <span class="seta" aria-hidden="true">→</span></a>
+        <a class="btn lg claro" href="reservas.php">Minhas reservas</a>
+      </div>
+    </section>
 
     <?php endif; ?>
 

@@ -568,6 +568,60 @@ document.addEventListener('DOMContentLoaded', function () {
     })();
   }
 
+  // Movimento de entrada: cards aparecem ao rolar (um depois do outro), as
+  // barras dos gráficos crescem e os números dos indicadores contam até o
+  // valor. Só transform/opacity (60fps). Quem pediu menos animação no
+  // sistema, ou navegador sem IntersectionObserver, vê tudo pronto.
+  var reduzMovimento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduzMovimento && 'IntersectionObserver' in window) {
+    var raizAnima = document.documentElement;
+    var SELETOR_REVELAR = 'main .hero, main .kpi-card, main .stat-card, main .dash-row > .panel, main > .panel, main .quick-action, main .book-card, main .cta-bloco, main .form-panel, main .table-wrap';
+    var alvos = document.querySelectorAll(SELETOR_REVELAR);
+
+    // posição dentro do grupo (irmãos), para o atraso em cascata
+    alvos.forEach(function (el) {
+      var irmaos = Array.prototype.filter.call(el.parentNode.children, function (f) { return f.matches(SELETOR_REVELAR); });
+      el.style.setProperty('--i', Math.min(irmaos.indexOf(el), 8));
+      el.classList.add('revelar');
+    });
+    document.querySelectorAll('.col-grupo').forEach(function (grupo, i) {
+      grupo.querySelectorAll('.col').forEach(function (col) { col.style.setProperty('--c', i); });
+    });
+    raizAnima.classList.add('anima');
+
+    function contar(el) {
+      // anima só o primeiro número em texto puro (ex.: "12", "45% emprestado")
+      var no = Array.prototype.find.call(el.childNodes, function (n) {
+        return n.nodeType === 3 && /\d/.test(n.nodeValue);
+      });
+      if (!no) { return; }
+      var partes = no.nodeValue.match(/^(\s*)(\d+)(.*)$/s);
+      if (!partes) { return; }
+      var fim = parseInt(partes[2], 10);
+      if (fim < 2) { return; }
+      var inicio = performance.now(), DURACAO = 900;
+      (function passo(agora) {
+        var t = Math.min((agora - inicio) / DURACAO, 1);
+        var suave = 1 - Math.pow(1 - t, 3);
+        no.nodeValue = partes[1] + Math.round(fim * suave) + partes[3];
+        if (t < 1) { requestAnimationFrame(passo); }
+      })(inicio);
+    }
+
+    var observador = new IntersectionObserver(function (entradas) {
+      entradas.forEach(function (entrada) {
+        if (!entrada.isIntersecting) { return; }
+        var el = entrada.target;
+        observador.unobserve(el);
+        el.classList.add('visivel');
+        el.querySelectorAll('.valor, .meter-valor, .mini-stats strong').forEach(contar);
+        // terminada a entrada, libera o hover sem atraso
+        setTimeout(function () { el.classList.add('pronto'); }, 700 + (parseInt(el.style.getPropertyValue('--i'), 10) || 0) * 60);
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    alvos.forEach(function (el) { observador.observe(el); });
+  }
+
   // Configurações → Aparência: aplica o tema na hora (sem esperar o servidor)
   // e envia o formulário para o PHP gravar a escolha no cookie.
   var formTema = document.getElementById('form-tema');

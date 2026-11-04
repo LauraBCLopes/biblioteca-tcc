@@ -76,7 +76,7 @@ function navIcone(string $slug): string
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= e($tituloAba ?? 'Painel') ?> — Bibliotech</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/estilo.css?v=<?= VERSAO_ASSETS ?>">
 </head>
 <body>
@@ -90,6 +90,7 @@ function navIcone(string $slug): string
       </div>
     </div>
     <nav>
+      <div class="nav-rotulo">Biblioteca</div>
       <a href="index.php"<?= linkAtivo('painel', $paginaAtual) ?>><?= navIcone('painel') ?> Início</a>
       <a href="livros.php"<?= linkAtivo('livros', $paginaAtual) ?>><?= navIcone('livros') ?> Livros</a>
       <?php if (isAdmin()): ?>
@@ -100,8 +101,22 @@ function navIcone(string $slug): string
       <?php if (isAdmin()): ?>
         <a href="relatorios.php"<?= linkAtivo('relatorios', $paginaAtual) ?>><?= navIcone('relatorios') ?> Relatórios</a>
       <?php endif; ?>
+      <div class="nav-rotulo">Conta</div>
       <a href="configuracoes.php"<?= linkAtivo('configuracoes', $paginaAtual) ?>><?= navIcone('configuracoes') ?> Configurações</a>
     </nav>
+
+    <!-- chamada no pé do menu: a ação mais importante para cada perfil -->
+    <div class="sidebar-cta">
+      <?php if (isAdmin()): ?>
+        <strong>Novo empréstimo</strong>
+        <p>Registre a saída de um livro em poucos cliques.</p>
+        <a class="btn small" href="emprestimos.php">Registrar <span class="seta" aria-hidden="true">→</span></a>
+      <?php else: ?>
+        <strong>Sua próxima leitura</strong>
+        <p>Descubra títulos disponíveis agora na estante.</p>
+        <a class="btn small" href="livros.php">Explorar acervo <span class="seta" aria-hidden="true">→</span></a>
+      <?php endif; ?>
+    </div>
   </aside>
 
   <div class="main-wrap">
