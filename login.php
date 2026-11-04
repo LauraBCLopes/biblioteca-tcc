@@ -42,11 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login — Bibliotech</title>
-<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/estilo.css?v=<?= VERSAO_ASSETS ?>">
 </head>
 <body>
-  <div class="auth-page">
+  <div class="auth-page login-pagina">
     <div class="auth-center">
       <div class="auth-brand">
         <div class="brand-name">Bibliotech</div>
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="login-card">
-        <h1>Seja bem-vindo!</h1>
+        <h1>Seja bem-vindo(a)!</h1>
 
         <?php if ($sucesso): ?>
           <div class="alert-box ok"><?= e($sucesso['mensagem']) ?></div>

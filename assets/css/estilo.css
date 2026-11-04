@@ -1045,3 +1045,12 @@ main{ counter-reset: secao; }
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation:none !important; transition:none !important; }
 }
+
+/* Tela de login: Montserrat em tudo (só nesta página) e título centralizado */
+.login-pagina{
+  --fonte: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  --fonte-display: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  font-family: var(--fonte);
+}
+.login-pagina .login-card h1{ text-align:center; letter-spacing:-0.3px; }
+.login-pagina .auth-brand .brand-name{ letter-spacing:-1px; }
