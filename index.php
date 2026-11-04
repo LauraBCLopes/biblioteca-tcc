@@ -268,9 +268,42 @@ require __DIR__ . '/includes/layout_topo.php';
     $icone = function (string $nome) use ($icones): string {
         return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' . $icones[$nome] . '</svg>';
     };
+
+    // Capas do acervo para a "parede" de livros do hero (lado direito, some em
+    // degradê). Embaralhadas no PHP para funcionar igual em MySQL e Postgres.
+    $capasHero = $pdo->query(
+        "SELECT id, titulo, capa_url FROM livros
+         WHERE capa_url IS NOT NULL AND capa_url <> ''
+         ORDER BY id DESC
+         LIMIT 16"
+    )->fetchAll();
+    shuffle($capasHero);
+    // 4 colunas de 4 capas; com poucas capas no acervo, elas se repetem
+    $colunasCapas = [];
+    // com menos de 4 capas diferentes a parede ficaria repetitiva: mantém a ilustração
+    if (count($capasHero) >= 4) {
+        $n = count($capasHero);
+        for ($c = 0; $c < 4; $c++) {
+            for ($l = 0; $l < 4; $l++) {
+                $colunasCapas[$c][] = $capasHero[($c * 4 + $l + $c) % $n];
+            }
+        }
+    }
     ?>
 
-    <section class="hero">
+    <section class="hero<?= $colunasCapas ? ' com-capas' : '' ?>">
+      <?php if ($colunasCapas): ?>
+        <div class="hero-capas" aria-hidden="true">
+          <?php foreach ($colunasCapas as $c => $coluna): ?>
+            <div class="hero-capas-coluna" style="--col: <?= $c ?>;">
+              <?php // a lista aparece duas vezes para a rolagem infinita não ter emenda
+              foreach (array_merge($coluna, $coluna) as $capa): ?>
+                <img src="<?= e($capa['capa_url']) ?>" alt="" loading="eager" decoding="async" draggable="false">
+              <?php endforeach; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
       <div class="hero-texto">
         <span class="hero-chip"><span class="pulso" aria-hidden="true"></span><span class="mono">Hoje · <?= date('d/m/Y') ?></span></span>
         <h2>Bem-vindo(a), <em><?= e($primeiroNome) ?></em>!</h2>
@@ -287,6 +320,7 @@ require __DIR__ . '/includes/layout_topo.php';
           <?php endif; ?>
         </div>
       </div>
+      <?php if (!$colunasCapas): ?>
 <svg class="hero-arte" viewBox="0 0 230 130" fill="none" aria-hidden="true">
         <rect x="20" y="104" width="190" height="22" rx="4" fill="#3F7FE8"/>
         <rect x="54" y="108" width="150" height="14" rx="2" fill="#fff"/>
@@ -313,6 +347,7 @@ require __DIR__ . '/includes/layout_topo.php';
         Ler é construir novos amanhãs.
         <span class="traco" aria-hidden="true"></span>
       </div>
+      <?php endif; ?>
     </section>
 
     <?php if (isAdmin()): ?>
