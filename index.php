@@ -74,7 +74,7 @@ if (isAdmin()) {
          LIMIT 5"
     )->fetchAll();
 
-    $renovacoesPendentes = (int) $pdo->query('SELECT COUNT(*) FROM emprestimos WHERE renovacao_solicitada = TRUE')->fetchColumn();
+    $renovacoesPendentes = (int) $pdo->query("SELECT COUNT(*) FROM emprestimos WHERE renovacao_solicitada = TRUE AND status != 'devolvido'")->fetchColumn();
 
     // --- ocupação do acervo: quanto dos exemplares está fora da estante ---
     $exemplaresFora    = $totalExemplares - $totalDisponiveis;

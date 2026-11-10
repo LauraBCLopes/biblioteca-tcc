@@ -89,7 +89,8 @@ if (!empty($_GET['devolver'])) {
     $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("UPDATE emprestimos
-            SET status = 'devolvido', data_devolucao = :hoje, devolucao_solicitada = FALSE
+            SET status = 'devolvido', data_devolucao = :hoje, devolucao_solicitada = FALSE,
+                renovacao_solicitada = FALSE
             WHERE id = :id");
         $stmt->execute(['hoje' => date('Y-m-d'), 'id' => $idDevolver]);
 
@@ -117,6 +118,7 @@ if (!empty($_GET['devolver'])) {
             'status'        => $emprestimo['status'],
             'leitor_status' => $statusLeitorAntes,
             'solicitada'    => bdBool($emprestimo['devolucao_solicitada']),
+            'renovacao_solicitada' => bdBool($emprestimo['renovacao_solicitada']),
             'em'            => time(),
         ];
         $acaoDesfazer = ['texto' => 'Desfazer', 'url' => 'emprestimos.php?desfazer_devolucao=' . $idDevolver];
@@ -212,14 +214,16 @@ if (!empty($_GET['desfazer_devolucao'])) {
             throw new RuntimeException('Não dá para desfazer: o exemplar devolvido já foi emprestado novamente.');
         }
 
-        // se o aluno tinha avisado a devolução, o aviso volta a ficar pendente
+        // se o aluno tinha avisado a devolução ou pedido renovação, o aviso/pedido volta a ficar pendente
         $stmt = $pdo->prepare('UPDATE emprestimos
-            SET status = :status, data_devolucao = NULL, devolucao_solicitada = :solicitada
+            SET status = :status, data_devolucao = NULL, devolucao_solicitada = :solicitada,
+                renovacao_solicitada = :renovacao_solicitada
             WHERE id = :id');
         $stmt->execute([
-            'status'     => $ultima['status'],
-            'solicitada' => !empty($ultima['solicitada']) ? 1 : 0,
-            'id'         => $idDesfazer,
+            'status'               => $ultima['status'],
+            'solicitada'           => !empty($ultima['solicitada']) ? 1 : 0,
+            'renovacao_solicitada' => !empty($ultima['renovacao_solicitada']) ? 1 : 0,
+            'id'                   => $idDesfazer,
         ]);
 
         $stmt = $pdo->prepare('UPDATE livros SET exemplares_disponiveis = exemplares_disponiveis - 1 WHERE id = :id');
@@ -753,7 +757,7 @@ require __DIR__ . '/includes/layout_topo.php';
               </td>
               <td class="mono">
                 <?= (int) $e['renovacoes'] ?>/2
-                <?php if (bdBool($e['renovacao_solicitada'])): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
+                <?php if ($e['status'] !== 'devolvido' && bdBool($e['renovacao_solicitada'])): ?><br><span class="badge warn">Renovação pendente</span><?php endif; ?>
               </td>
               <td><div class="acoes-linha">
                 <?php if ($e['status'] !== 'devolvido'): ?>

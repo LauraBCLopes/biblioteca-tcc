@@ -183,7 +183,7 @@ $novosLeitores = contar($pdo,
 
 // estes dois são a situação de AGORA, não do período
 $atrasadosAgora    = contar($pdo, "SELECT COUNT(*) FROM emprestimos WHERE status = 'atrasado'");
-$renovacoesPendentes = contar($pdo, 'SELECT COUNT(*) FROM emprestimos WHERE renovacao_solicitada = TRUE');
+$renovacoesPendentes = contar($pdo, "SELECT COUNT(*) FROM emprestimos WHERE renovacao_solicitada = TRUE AND status != 'devolvido'");
 
 // ---------- livros mais emprestados no período ----------
 $maisEmprestados = consultar($pdo,
