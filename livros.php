@@ -15,13 +15,31 @@ function gerarCodigo(PDO $pdo, int $categoriaId): string
     $stmt->execute(['id' => $categoriaId]);
     $slug = $stmt->fetchColumn();
 
+    // mesmas siglas usadas em sql/acervo_ampliado_supabase.sql
     $prefixos = [
-        'romance'            => 'RO',
-        'ficcao-cientifica'  => 'FC',
-        'educacional'        => 'ED',
-        'obras-brasileiras'  => 'BR',
+        'romance'              => 'RO',
+        'ficcao-cientifica'    => 'FC',
+        'educacional'          => 'ED',
+        'obras-brasileiras'    => 'BR',
+        'fantasia'             => 'FA',
+        'suspense-e-misterio'  => 'SM',
+        'terror'               => 'TE',
+        'distopia'             => 'DI',
+        'poesia'               => 'PO',
+        'infantojuvenil'       => 'IJ',
+        'biografia-e-memorias' => 'BI',
+        'historia'             => 'HI',
+        'filosofia'            => 'FI',
+        'hqs-e-mangas'         => 'HQ',
     ];
-    $prefixo = $prefixos[$slug] ?? 'XX';
+
+    if (isset($prefixos[$slug])) {
+        $prefixo = $prefixos[$slug];
+    } else {
+        // gênero novo, fora da lista: usa as duas primeiras letras do slug
+        $letras = preg_replace('/[^a-z]/', '', strtolower((string) $slug));
+        $prefixo = strlen($letras) >= 2 ? strtoupper(substr($letras, 0, 2)) : 'XX';
+    }
 
     do {
         $codigo = $prefixo . '-' . random_int(100, 999) . '.' . random_int(0, 9);
